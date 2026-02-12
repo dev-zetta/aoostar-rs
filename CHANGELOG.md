@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## v0.3.0 - 2026-02-12
 
 ### Changed
 - **Direct sensor reading**: `asterctl` now reads system sensors directly via the `aster-sysinfo` library crate,
@@ -24,7 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   automatically turn the LCD on/off at specific hours (e.g., on at 8:00, off at 23:00).
 - **Separate time page duration**: New `timePageTime` setting in `monitor.json` to control how long
   the clock page is displayed, independent of `sensorPageTime`. Defaults to `sensorPageTime` if not set.
+- **Color thresholds**: New `colorThresholds` setting on sensor templates for dynamic value-based
+  coloring (e.g., green → yellow → orange → red based on temperature or usage percentage).
+- **Sensor label formatting**: Labels are rendered uppercase and wrapped in brackets (e.g., `[ CPU TEMP ]`).
 - `render_sensor_page_from_template` rendering method for template-based sensor pages.
+- Startup logging of all discovered sensor keys with their current values.
+- Page cycling log now includes the current sensor value for debugging.
 
 ### Removed
 - **Sensor mapping**: The `sensorMapping` section in `monitor.json` and the `--sensor-mapping` CLI

@@ -1,6 +1,6 @@
 [package]
 name = "aster-sysinfo"
-version = "0.2.0"
+version = "0.3.0"
 description = "System sensor provider for asterctl"
 
 rust-version.workspace = true
