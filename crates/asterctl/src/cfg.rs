@@ -350,7 +350,7 @@ pub struct Sensor {
     /// Label identifier, also used as data source identifier.
     pub label: String,
     /// Sensor value. Ignored: value is used from a sensor source
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub value: Option<String>, // "" or numbers, so Option<String>
 
     /// Image for progress, fan and pointer indicators
@@ -359,7 +359,7 @@ pub struct Sensor {
     pub max_value: Option<f32>,
 
     /// Optional unit text to print after the value
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub unit: Option<String>,
     /// Rounded x-position. Custom panel coordinates are stored as float!
     #[serde(deserialize_with = "f32_as_rounded_i32")]
@@ -386,14 +386,14 @@ pub struct Sensor {
 
     /// Number of integer places for the sensor value.
     // -1 ≈ unset ⇒ Option<i32>
-    #[serde(deserialize_with = "option_none_if_minus_one")]
+    #[serde(default, deserialize_with = "option_none_if_minus_one")]
     pub integer_digits: Option<i32>,
     /// Number of decimal places for the sensor value.
     // -1 ≈ unset ⇒ Option<i32>
-    #[serde(deserialize_with = "option_none_if_minus_one")]
+    #[serde(default, deserialize_with = "option_none_if_minus_one")]
     pub decimal_digits: Option<i32>,
     /// Image for progress, fan and pointer indicators
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub pic: Option<String>,
 
     /// Used for fan & pointer sensors
