@@ -908,13 +908,13 @@ pub fn slide_transition(old: &RgbaImage, new: &RgbaImage, progress: f32) -> Rgba
 
     // Copy visible part of old image (shifted left)
     if offset < w {
-        let old_visible = image::imageops::crop_imm(old, offset, 0, w - offset, h);
+        let old_visible = image::imageops::crop_imm(old, offset, 0, w - offset, h).to_image();
         image::imageops::replace(&mut frame, &old_visible, 0, 0);
     }
 
     // Copy visible part of new image (entering from right)
     if offset > 0 {
-        let new_visible = image::imageops::crop_imm(new, 0, 0, offset, h);
+        let new_visible = image::imageops::crop_imm(new, 0, 0, offset, h).to_image();
         image::imageops::replace(&mut frame, &new_visible, (w - offset) as i64, 0);
     }
 
