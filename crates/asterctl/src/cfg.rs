@@ -201,12 +201,12 @@ pub struct Credentials {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Setup {
-    /// Switch time between panels in seconds, interpreted as float and converted to milliseconds. Default: 5
-    pub switch_time: Option<String>, // existed as "30" string
     /// Panel redraw interval in seconds. Default: 1
     pub refresh: f32,
     /// Time in seconds to display each sensor page before cycling to the next. Default: 10
     pub sensor_page_time: Option<f32>,
+    /// Time in seconds to display the time/clock page. Defaults to `sensor_page_time` if not set.
+    pub time_page_time: Option<f32>,
     /// Date/time label for a dedicated time page in the sensor page rotation.
     /// Example values: "DATE_h_m_s_1" (HH:MM:SS), "DATE_h_m_3" (HH:MM), "DATE_m_d_h_m_2" (MM/DD HH:MM).
     /// If not set, no time page is shown.

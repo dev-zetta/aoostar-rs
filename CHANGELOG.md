@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Display schedule**: New `displayOnHour` / `displayOffHour` settings in `monitor.json` to
   automatically turn the LCD on/off at specific hours (e.g., on at 8:00, off at 23:00).
+- **Separate time page duration**: New `timePageTime` setting in `monitor.json` to control how long
+  the clock page is displayed, independent of `sensorPageTime`. Defaults to `sensorPageTime` if not set.
 - `render_sensor_page_from_template` rendering method for template-based sensor pages.
 
 ### Removed
@@ -31,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   code (`start_file_slurper`, `read_key_value_file`, `read_filter_file`, `read_path`) have been removed.
 - External sensor mapping and filter configuration files are no longer used.
   Sensor filters are now defined inline in `monitor.json` via the `sensorFilter` array.
+- Unused `switchTime` configuration field removed from `Setup`.
 
 ## v0.2.0 - 2025-08-31
 ### Fixed

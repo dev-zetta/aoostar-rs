@@ -1,8 +1,8 @@
 {
   "setup": {
-    "switchTime": "30",
     "refresh": 1,
-    "sensorPageTime": 60,
+    "sensorPageTime": 5,
+    "timePageTime": 60,
     "timePage": "DATE_h_m_s_1",
     "sensorPageLabel": {
       "fontFamily": "HarmonyOS_Sans_SC_Bold",

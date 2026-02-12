@@ -217,6 +217,9 @@ fn run_sensor_panel<B: Into<PathBuf>>(
     let refresh = Duration::from_millis((cfg.setup.refresh * 1000f32) as u64);
     let sensor_page_time =
         Duration::from_secs_f32(cfg.setup.sensor_page_time.unwrap_or(10.0));
+    let time_page_time = Duration::from_secs_f32(
+        cfg.setup.time_page_time.unwrap_or(cfg.setup.sensor_page_time.unwrap_or(10.0)),
+    );
 
     // Compile sensor template patterns from active panels
     let templates = compile_sensor_templates(&cfg);
@@ -232,9 +235,10 @@ fn run_sensor_panel<B: Into<PathBuf>>(
     }
 
     info!(
-        "Sensor page mode: {} pages, cycling every {:.1}s",
+        "Sensor page mode: {} pages, sensor={:.1}s, time={:.1}s",
         pages.len(),
-        sensor_page_time.as_secs_f32()
+        sensor_page_time.as_secs_f32(),
+        time_page_time.as_secs_f32()
     );
 
     let time_font_size = cfg.setup.time_page_font_size;
@@ -299,8 +303,12 @@ fn run_sensor_panel<B: Into<PathBuf>>(
                     screen.off()?;
                     display_off = true;
                 }
+                let page_duration = match page {
+                    PageKind::Sensor(_) => sensor_page_time,
+                    PageKind::Time(_) => time_page_time,
+                };
                 sleep(Duration::from_secs(30));
-                if page_start.elapsed() >= sensor_page_time {
+                if page_start.elapsed() >= page_duration {
                     break;
                 }
                 continue;
@@ -338,7 +346,11 @@ fn run_sensor_panel<B: Into<PathBuf>>(
                 sleep(refresh - elapsed);
             }
 
-            if page_start.elapsed() >= sensor_page_time {
+            let page_duration = match page {
+                PageKind::Sensor(_) => sensor_page_time,
+                PageKind::Time(_) => time_page_time,
+            };
+            if page_start.elapsed() >= page_duration {
                 break;
             }
 
