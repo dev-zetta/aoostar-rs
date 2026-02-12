@@ -27,7 +27,7 @@
         {
           "mode": 1,
           "match": "^temperature_cpu$",
-          "name": "CPU Temp",
+          "name": "CPU TEMP",
           "x": 480,
           "y": 200,
           "fontFamily": "HarmonyOS_Sans_SC_Bold",
@@ -41,7 +41,7 @@
         {
           "mode": 1,
           "match": "^cpu_usage_percent$",
-          "name": "CPU Usage",
+          "name": "CPU USAGE",
           "x": 480,
           "y": 200,
           "fontFamily": "HarmonyOS_Sans_SC_Bold",
@@ -49,12 +49,13 @@
           "fontColor": -1,
           "textAlign": "center",
           "decimalDigits": 0,
-          "unit": " %"
+          "unit": " %",
+          "colorThresholds": [[0, "#00ff00"], [50, "#ffff00"], [75, "#ff8800"], [90, "#ff0000"]]
         },
         {
           "mode": 1,
           "match": "^mem_usage_percent$",
-          "name": "RAM Usage",
+          "name": "RAM USAGE",
           "x": 480,
           "y": 200,
           "fontFamily": "HarmonyOS_Sans_SC_Bold",
@@ -62,12 +63,13 @@
           "fontColor": -1,
           "textAlign": "center",
           "decimalDigits": 0,
-          "unit": " %"
+          "unit": " %",
+          "colorThresholds": [[0, "#00ff00"], [50, "#ffff00"], [75, "#ff8800"], [90, "#ff0000"]]
         },
         {
           "mode": 1,
           "match": "^temperature_nvme_Composite_(.+)$",
-          "name": "NVMe {1}",
+          "name": "NVME {1}",
           "x": 480,
           "y": 200,
           "fontFamily": "HarmonyOS_Sans_SC_Bold",
@@ -81,7 +83,7 @@
         {
           "mode": 1,
           "match": "^storage_ssd\\[(\\d+)\\]_usage_percent$",
-          "name": "SSD {1} Usage",
+          "name": "SSD {1} USAGE",
           "x": 480,
           "y": 200,
           "fontFamily": "HarmonyOS_Sans_SC_Bold",
@@ -94,7 +96,7 @@
         {
           "mode": 1,
           "match": "^network_.+_address\\d+$",
-          "name": "IP Address",
+          "name": "IP ADDRESS",
           "x": 480,
           "y": 200,
           "fontFamily": "HarmonyOS_Sans_SC_Bold",
@@ -105,7 +107,7 @@
         {
           "mode": 1,
           "match": "^network_.+_upload_speed$",
-          "name": "Upload",
+          "name": "UPLOAD",
           "x": 480,
           "y": 200,
           "fontFamily": "HarmonyOS_Sans_SC_Bold",
@@ -116,7 +118,7 @@
         {
           "mode": 1,
           "match": "^network_.+_download_speed$",
-          "name": "Download",
+          "name": "DOWNLOAD",
           "x": 480,
           "y": 200,
           "fontFamily": "HarmonyOS_Sans_SC_Bold",

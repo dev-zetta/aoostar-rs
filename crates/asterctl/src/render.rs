@@ -248,7 +248,8 @@ impl PanelRenderer {
             .and_then(|c| c.font_color)
             .map(|c| c.into())
             .unwrap_or(Rgba([180, 180, 180, 255]));
-        let name_sz = text_size(name_scale, &name_font, display_name);
+        let label_text = format!("[ {} ]", display_name.to_uppercase());
+        let name_sz = text_size(name_scale, &name_font, &label_text);
         let name_x = label_cfg
             .and_then(|c| c.x)
             .unwrap_or_else(|| (self.size.0 as i32 - name_sz.0 as i32) / 2);
@@ -260,7 +261,7 @@ impl PanelRenderer {
             name_y,
             name_scale,
             &name_font,
-            display_name,
+            &label_text,
         );
 
         if let Some(value) = value {
