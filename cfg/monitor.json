@@ -1,7 +1,9 @@
 {
   "setup": {
     "switchTime": "30",
-    "refresh": 1
+    "refresh": 1,
+    "sensorPageTime": 10,
+    "timePage": "DATE_h_m_s_1"
   },
   "mianban": [
     1,
