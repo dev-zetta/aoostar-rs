@@ -204,6 +204,11 @@ pub struct Setup {
     pub refresh: f32,
     /// Time in seconds to display each sensor page before cycling to the next. Default: 10
     pub sensor_page_time: Option<f32>,
+    /// Date/time label for a dedicated time page in the sensor page rotation.
+    /// Example values: "DATE_h_m_s_1" (HH:MM:SS), "DATE_h_m_3" (HH:MM), "DATE_m_d_h_m_2" (MM/DD HH:MM).
+    /// If not set, no time page is shown.
+    #[serde(deserialize_with = "empty_string_as_none")]
+    pub time_page: Option<String>,
     /*
     // The following fields of the AOOSTAR-X json configuration file are NOT used in `asterctl`
     /// Default: true

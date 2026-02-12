@@ -155,6 +155,47 @@ impl PanelRenderer {
         Ok(final_image)
     }
 
+    /// Render a dedicated time page: centered date/time text on a black background.
+    ///
+    /// # Arguments
+    ///
+    /// * `label`: a date/time label recognized by [get_date_time_value], e.g. "DATE_h_m_s_1".
+    ///
+    /// returns: a rendered time page image in [RgbaImage] format, or an [ImageProcessingError] in case of an error.
+    pub fn render_time_page(&mut self, label: &str) -> Result<RgbaImage, ImageProcessingError> {
+        let now_dt: DateTime<Local> = Local::now();
+        let value = get_date_time_value(label, &now_dt)
+            .unwrap_or_else(|| "??:??".to_string());
+
+        debug!("Rendering time page: {label} = {value}");
+
+        let mut image = RgbaImage::new(self.size.0, self.size.1);
+
+        let font = FontHandler::default_font();
+        let font_size = 64.0_f32;
+        let adjustment_hack = 0.75;
+        let scale = font.pt_to_px_scale(font_size * adjustment_hack).unwrap();
+        let color = Rgba([255, 255, 255, 255]);
+
+        let text_sz = text_size(scale, &font, &value);
+        let x = (self.size.0 as i32 - text_sz.0 as i32) / 2;
+        let y = (self.size.1 as i32 - (text_sz.1 as f32 * 1.3333 / 2.0) as i32) / 2;
+
+        draw_text_mut(&mut image, color, x, y, scale, &font, &value);
+
+        if self.save_render_img {
+            let name = format!(
+                "render_time{}.png",
+                self.img_suffix.as_deref().unwrap_or_default()
+            );
+            if let Err(e) = image.save(self.img_save_path.join(name)) {
+                error!("Error saving time page image: {e}");
+            }
+        }
+
+        Ok(image)
+    }
+
     /// Render a single sensor page: one sensor on the panel background.
     ///
     /// # Arguments

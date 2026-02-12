@@ -263,8 +263,8 @@ fn run_sensor_panel<B: Into<PathBuf>>(
     let sensor_page_time =
         Duration::from_secs_f32(cfg.setup.sensor_page_time.unwrap_or(10.0));
 
-    // Collect all (panel_index, sensor_index) pairs from active panels
-    let mut sensor_pages: Vec<(usize, usize)> = Vec::new();
+    // Collect all pages: sensor pages from active panels + optional time page
+    let mut pages: Vec<PageKind> = Vec::new();
     for &active in &cfg.active_panels {
         if active == 0 || active > cfg.panels.len() as u32 {
             continue;
@@ -272,38 +272,50 @@ fn run_sensor_panel<B: Into<PathBuf>>(
         let panel_idx = active as usize - 1;
         let panel = &cfg.panels[panel_idx];
         for sensor_idx in 0..panel.sensor.len() {
-            sensor_pages.push((panel_idx, sensor_idx));
+            pages.push(PageKind::Sensor(panel_idx, sensor_idx));
         }
     }
 
-    if sensor_pages.is_empty() {
-        return Err(anyhow!("No sensor pages to display"));
+    if let Some(time_label) = &cfg.setup.time_page {
+        info!("Time page enabled: {time_label}");
+        pages.push(PageKind::Time(time_label.clone()));
+    }
+
+    if pages.is_empty() {
+        return Err(anyhow!("No pages to display"));
     }
 
     info!(
-        "Sensor page mode: {} sensor pages, cycling every {:.1}s",
-        sensor_pages.len(),
+        "Sensor page mode: {} pages, cycling every {:.1}s",
+        pages.len(),
         sensor_page_time.as_secs_f32()
     );
 
-    // sensor page cycling loop
+    // page cycling loop
     let mut page_idx = 0;
     loop {
-        let (panel_idx, sensor_idx) = sensor_pages[page_idx];
-        let panel = &cfg.panels[panel_idx];
+        let page = &pages[page_idx];
 
-        info!(
-            "Sensor page {}/{}: panel '{}', sensor '{}'",
-            page_idx + 1,
-            sensor_pages.len(),
-            panel.friendly_name(),
-            panel.sensor[sensor_idx].label
-        );
+        match page {
+            PageKind::Sensor(panel_idx, sensor_idx) => {
+                let panel = &cfg.panels[*panel_idx];
+                info!(
+                    "Page {}/{}: panel '{}', sensor '{}'",
+                    page_idx + 1,
+                    pages.len(),
+                    panel.friendly_name(),
+                    panel.sensor[*sensor_idx].label
+                );
+            }
+            PageKind::Time(label) => {
+                info!("Page {}/{}: time ({})", page_idx + 1, pages.len(), label);
+            }
+        }
 
         let page_start = Instant::now();
         let mut refresh_count = 1;
 
-        // refresh loop for current sensor page
+        // refresh loop for current page
         loop {
             let upd_start_time = Instant::now();
 
@@ -311,16 +323,26 @@ fn run_sensor_panel<B: Into<PathBuf>>(
                 renderer.set_img_suffix(format!("-{refresh_count:02}"));
             }
 
-            let values = sensor_values.read().expect("RwLock is poisoned");
-            match renderer.render_sensor_page(panel, sensor_idx, &values) {
-                Ok(image) => screen.send_image(&image)?,
-                Err(e) => error!(
-                    "Error rendering sensor page '{}'/[{}]: {e:?}",
-                    panel.friendly_name(),
-                    sensor_idx
-                ),
+            match page {
+                PageKind::Sensor(panel_idx, sensor_idx) => {
+                    let panel = &cfg.panels[*panel_idx];
+                    let values = sensor_values.read().expect("RwLock is poisoned");
+                    match renderer.render_sensor_page(panel, *sensor_idx, &values) {
+                        Ok(image) => screen.send_image(&image)?,
+                        Err(e) => error!(
+                            "Error rendering sensor page '{}'/[{}]: {e:?}",
+                            panel.friendly_name(),
+                            sensor_idx
+                        ),
+                    }
+                }
+                PageKind::Time(label) => {
+                    match renderer.render_time_page(label) {
+                        Ok(image) => screen.send_image(&image)?,
+                        Err(e) => error!("Error rendering time page: {e:?}"),
+                    }
+                }
             }
-            drop(values);
 
             let elapsed = upd_start_time.elapsed();
             if refresh > elapsed {
@@ -334,6 +356,11 @@ fn run_sensor_panel<B: Into<PathBuf>>(
             refresh_count += 1;
         }
 
-        page_idx = (page_idx + 1) % sensor_pages.len();
+        page_idx = (page_idx + 1) % pages.len();
     }
+}
+
+enum PageKind {
+    Sensor(usize, usize),
+    Time(String),
 }
