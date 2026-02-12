@@ -400,7 +400,7 @@ impl PanelRenderer {
             sensor.x, sensor.y
         );
 
-        let font_color = sensor.font_color.unwrap_or_default().into();
+        let font_color = sensor.resolve_color(value);
         draw_text_mut(background, font_color, x, y, scale, &font, &text);
 
         Ok(())

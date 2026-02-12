@@ -423,6 +423,16 @@ pub struct Sensor {
     // -1 ≈ unset ⇒ Option<i32>
     #[serde(default, deserialize_with = "option_none_if_minus_one")]
     pub decimal_digits: Option<i32>,
+    /// Color thresholds for dynamic value-based coloring.
+    /// Each entry is a `[threshold, "#RRGGBB"]` pair. The color of the highest threshold
+    /// that the sensor value meets or exceeds is used. If the value is below all thresholds,
+    /// `font_color` is used as default.
+    ///
+    /// Example: `[[50, "#00ff00"], [65, "#ffff00"], [75, "#ff8800"], [85, "#ff0000"]]`
+    /// means: green ≥50, yellow ≥65, orange ≥75, red ≥85.
+    #[serde(default)]
+    pub color_thresholds: Vec<(f32, FontColor)>,
+
     /// Image for progress, fan and pointer indicators
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub pic: Option<String>,
@@ -449,6 +459,27 @@ pub struct Sensor {
     /// For type = 6
     pub interval: Option<u32>,
      */
+}
+
+impl Sensor {
+    /// Resolve the font color based on `color_thresholds` and the current sensor value.
+    /// Returns the color of the highest threshold ≤ value, or `font_color` if no threshold matches.
+    pub fn resolve_color(&self, value_str: &str) -> Rgba<u8> {
+        let default_color: Rgba<u8> = self.font_color.unwrap_or_default().into();
+        if self.color_thresholds.is_empty() {
+            return default_color;
+        }
+        let Ok(val) = value_str.parse::<f32>() else {
+            return default_color;
+        };
+        let mut result = default_color;
+        for (threshold, color) in &self.color_thresholds {
+            if val >= *threshold {
+                result = (*color).into();
+            }
+        }
+        result
+    }
 }
 
 /// Sensor element type. Name is based on AOOSTAR-X web configuration

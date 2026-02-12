@@ -35,7 +35,8 @@
           "fontColor": -1,
           "textAlign": "center",
           "decimalDigits": 0,
-          "unit": " \u00b0C"
+          "unit": " \u00b0C",
+          "colorThresholds": [[0, "#00ff00"], [65, "#ffff00"], [80, "#ff8800"], [90, "#ff0000"]]
         },
         {
           "mode": 1,
@@ -74,7 +75,8 @@
           "fontColor": -1,
           "textAlign": "center",
           "decimalDigits": 0,
-          "unit": " \u00b0C"
+          "unit": " \u00b0C",
+          "colorThresholds": [[0, "#00ff00"], [45, "#ffff00"], [55, "#ff8800"], [65, "#ff0000"]]
         },
         {
           "mode": 1,
