@@ -1,4 +1,7 @@
-# Sensor Data Provider Shell Scripts
+# Sensor Data Provider Shell Scripts (Legacy)
+
+> **Note**: These shell scripts are no longer needed. `asterctl` now reads sensor values directly
+> from the system via the integrated `aster-sysinfo` library. These scripts are kept for reference only.
 
 The [/linux/scripts](../../../linux/scripts) directory contains some proof-of-concept Linux shell scripts.
 

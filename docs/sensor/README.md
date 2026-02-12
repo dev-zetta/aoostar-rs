@@ -15,62 +15,55 @@ Different sensor modes are supported:
 
 ## Sensor Data Sources
 
-The sensor value reading is separated from the `asterctl` tool, with the exception of some internal sensors:
+Sensor values are read directly from the system by `asterctl` using the integrated
+[aster-sysinfo](../../crates/aster-sysinfo) library. No external scripts or intermediate text files are needed.
 
-- Internal [date time sensors](provider/internal_date_time.md)
+The `aster-sysinfo` library uses the [sysinfo](https://github.com/GuillaumeGomez/sysinfo) crate to collect:
+- CPU usage and temperature
+- Memory usage
+- Disk usage and NVMe temperatures
+- Network interface addresses, upload/download speeds
+- Hardware component temperatures
 
-Sensor values are provided in separate text files and are automatically read when the file changes.  
-Only the file data source is supported at the moment; other sources like pipes, sockets, etc. might be supported later.
+Additionally, internal [date time sensors](provider/internal_date_time.md) are available for displaying the current
+date and time on a dedicated time page.
 
-- [Text file data source](provider/text_file.md)
+### Template-Based Sensor Display
 
-### Sensor Data Providers
+Sensor entries in `monitor.json` act as display templates using regex `match` patterns.
+At runtime, all discovered sensor keys are matched against these templates to dynamically build display pages.
 
-- Proof of concept [Linux shell scripts](provider/shell_scripts.md)
-- [aster-sysinfo tool](provider/sysinfo.md)
+One template can match multiple sensors. For example, a single NVMe temperature template matches all NVMe drives:
 
-### Sensor Identifier Mapping
-
-The original AOOSTAR-X software uses very weird label identifiers (actually sometimes even a composite key depending on
-the data source), which are likely based on an internal JSON structure.
-
-To easily use original custom sensor panels with various sensor data sources, a sensor identifier mapping file can be used.
-
-The mapping file is a simple text file with one identifier mapping per line:
-- Key = label identifier used in panel definition
-- Value = label identifier used in sensor providers
-
-Example:
-
+```json
+{
+  "mode": 1,
+  "match": "^temperature_nvme_Composite_(.+)$",
+  "name": "NVMe {1}",
+  "fontSize": 80,
+  "unit": " °C"
+}
 ```
-cpu_temperature: temperature_cpu
-```
 
-This maps the `temperature_cpu` sensor from the `aster-sysinfo` tool to the `cpu_temperature` sensor used in the
-AOOSTAR-X panel definitions.
-
-Usage example:
-```shell
-asterctl --config monitor.json --sensor-mapping sensor-mapping/sysinfo-to-aoostar.cfg
-```
+Regex capture groups can be referenced in the `name` field using `{1}`, `{2}`, etc.
 
 ### Sensor Filter
 
-Sensor entries in the text file can be filtered by regular expressions defined in the sensor filter file having the
-same name as the sensor identifier mapping file, but with the `-filter` suffix in the file name.
+Sensor keys can be filtered using regular expressions defined inline in `monitor.json` via the `sensorFilter` array:
 
-Example:
-- Sensor identifier mapping file: `sensor-mapping/sysinfo-to-aoostar.cfg`
-- Sensor filter file: `sensor-mapping/sysinfo-to-aoostar-filter.cfg`
-
-The filter file is a simple text file with one regular expression per line:
-
-Example:
-
-```
-# remove all temperature sensor units
-temperature_.*#unit
+```json
+"sensorFilter": [
+  "^temperature_.*#unit"
+]
 ```
 
-This removes all sensors starting with `temperature_` and ending with `#unit`, which will make sure that all the
-temperature sensors will be rendered without the unit text suffix on the display panel.
+This removes all sensors starting with `temperature_` and ending with `#unit`, ensuring temperature sensors are
+rendered without the unit text suffix.
+
+### Legacy Data Providers
+
+The following data providers are no longer needed but are kept for reference:
+
+- [Text file data source](provider/text_file.md) (legacy)
+- [Linux shell scripts](provider/shell_scripts.md) (legacy)
+- [aster-sysinfo CLI tool](provider/sysinfo.md) (standalone mode still available for debugging)

@@ -1,49 +1,31 @@
-# aster-sysinfo Tool
+# aster-sysinfo
 
-The Rust based [aster-sysinfo](https://github.com/zehnm/aoostar-rs/blob/main/crates/sysinfo) tool gathers many more system sensor values with the help of
-the [sysinfo](https://github.com/GuillaumeGomez/sysinfo) crate.
+The [aster-sysinfo](https://github.com/zehnm/aoostar-rs/blob/main/crates/aster-sysinfo) crate gathers system sensor
+values using the [sysinfo](https://github.com/GuillaumeGomez/sysinfo) crate.
 
-It supports FreeBSD, Linux, macOS, Windows and other OSes, but it has only been tested on Linux so far.
+It serves two purposes:
 
-```
-Proof of concept sensor value collection for the asterctl screen control tool
+1. **Library** (primary): Used by `asterctl` for direct, in-process sensor polling. Sensor values are read from the
+   system and stored in a shared HashMap, with no intermediate files or external processes needed.
+2. **CLI tool**: Standalone binary useful for debugging and inspecting all available sensor keys on your system.
 
-Usage: aster-sysinfo [OPTIONS]
+## Integrated Usage
 
-Options:
-  -o, --out <OUT>
-          Output sensor file
+When running `asterctl` in sensor panel mode, `aster-sysinfo` is used as a library automatically.
+A background thread polls sensors at the configured refresh interval and updates the shared sensor value store.
+No separate process or configuration is needed.
 
-  -t, --temp-dir <TEMP_DIR>
-          Temporary directory for preparing the output sensor file.
-          
-          The system temp directory is used if not specified.
-          The temp directory must be on the same file system for atomic rename
-          operation!
+## Standalone CLI
 
-      --console
-          Print values in console
+The CLI tool is useful for discovering available sensor keys on your system, which you can then reference in
+`monitor.json` template `match` patterns.
 
-  -r, --refresh <REFRESH>
-          System sensor refresh interval in seconds
-
-      --disk-refresh <DISK_REFRESH>
-          Enable individual disk refresh logic as used in AOOSTAR-X.
-          Refresh interval in seconds
-
-      --smartctl
-          Retrieve drive temperature if `disk-update` option is enabled.
-          
-          Requires smartctl and password-less sudo!
-```
-
-Single test run with printing all sensors in the console:
+Print all sensors once to the console:
 ```shell
 aster-sysinfo --console
 ```
 
-Normal mode providing sensor values for `asterctl` in `/tmp/sensors/sysinfo.txt` every 3 seconds:
-
+Write sensor values to a file (legacy mode, for debugging):
 ```shell
 aster-sysinfo --refresh 3 --out /tmp/sensors/aster-sysinfo.txt
 ```

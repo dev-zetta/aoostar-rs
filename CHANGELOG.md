@@ -7,7 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-_Changes in the next release_
+### Changed
+- **Direct sensor reading**: `asterctl` now reads system sensors directly via the `aster-sysinfo` library crate,
+  eliminating the need for external scripts, intermediate text files, and the file watcher.
+  The `aster-sysinfo` crate is now both a standalone CLI tool and a library used by `asterctl`.
+- **Template-based sensor display**: Sensor entries in `monitor.json` now use regex `match` patterns
+  instead of fixed labels. One template can match multiple sensors (e.g., all NVMe temperatures,
+  all SSD usage values). Capture groups can be referenced in display names with `{1}`, `{2}`, etc.
+- **Auto-discovery**: Pages are built dynamically at runtime by matching discovered sensor keys
+  against templates. No more hardcoded sensor mappings or duplicate entries.
+- Sensor label font size increased for better readability on the 960x376 display.
+- Time page font size is now configurable via `timePageFontSize` in `monitor.json`.
+
+### Added
+- **Display schedule**: New `displayOnHour` / `displayOffHour` settings in `monitor.json` to
+  automatically turn the LCD on/off at specific hours (e.g., on at 8:00, off at 23:00).
+- `render_sensor_page_from_template` rendering method for template-based sensor pages.
+
+### Removed
+- **Sensor mapping**: The `sensorMapping` section in `monitor.json` and the `--sensor-mapping` CLI
+  argument have been removed. Sensor templates with `match` patterns replace the old mapping approach.
+- **File-based sensor reading**: The file slurper, file watcher (`notify` dependency), and all related
+  code (`start_file_slurper`, `read_key_value_file`, `read_filter_file`, `read_path`) have been removed.
+- External sensor mapping and filter configuration files are no longer used.
+  Sensor filters are now defined inline in `monitor.json` via the `sensorFilter` array.
 
 ## v0.2.0 - 2025-08-31
 ### Fixed

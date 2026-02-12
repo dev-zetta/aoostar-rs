@@ -12,10 +12,12 @@ Check out the **[User Guide](https://zehnm.github.io/aoostar-rs)** for a list of
 - Switch the display on or off.
     - Also possible with standard [Linux shell commands](docs/shell_commands.md).
     - [Linux systemd Service](docs/linux/README.md) to automatically switch off the LCD at boot up.
+    - Configurable display schedule to automatically turn the LCD on/off at specific hours.
 - Display images (with automatic scaling and partial update support).
-- Render dynamic sensor panels defined from the AOOSTAR-X software.
-    - Update sensor values from simple text files.
-    - Rotate through multiple panels in a defined interval.
+- Render dynamic sensor pages with template-based configuration.
+    - Direct system sensor reading via the integrated `aster-sysinfo` library (no external scripts or files needed).
+    - Auto-discovery of sensors with regex-based template matching.
+    - Rotate through sensor pages and an optional time page at a configurable interval.
 - USB device/serial port selection.
 
 ## Disclaimer

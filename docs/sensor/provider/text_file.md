@@ -1,4 +1,7 @@
-# Text File Data Source
+# Text File Data Source (Legacy)
+
+> **Note**: This file-based data source is no longer used by `asterctl`. Sensor values are now read directly
+> from the system via the integrated `aster-sysinfo` library. This document is kept for reference only.
 
 - Text file with ending: `.txt`
 - Simple key / value pairs, separated by a colon `:`. Example: `foo: bar`
