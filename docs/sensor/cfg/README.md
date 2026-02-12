@@ -8,7 +8,7 @@ asterctl --config monitor.json
 - The configuration file is loaded from the configuration directory if not an absolute path is specified.
 - The default configuration directory is `./cfg` and can be changed with the `--config-dir` command line option.
 
-Example configuration file: [cfg/monitor.json](https://github.com/zehnm/aoostar-rs/blob/main/cfg/monitor.json).
+Example configuration file: [cfg/monitor.json](https://github.com/dev-zetta/aoostar-rs/blob/main/cfg/monitor.json).
 
 ## Setup
 

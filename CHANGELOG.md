@@ -42,14 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## v0.2.0 - 2025-08-31
 ### Fixed
-- Misplaced text sensors in custom panels ([#11](https://github.com/zehnm/aoostar-rs/issues/11)).
-- Wrong start position for circular progress (fan) sensor using a counter-clockwise direction ([#12](https://github.com/zehnm/aoostar-rs/issues/12)).
+- Misplaced text sensors in custom panels ([#11](https://github.com/dev-zetta/aoostar-rs/issues/11)).
+- Wrong start position for circular progress (fan) sensor using a counter-clockwise direction ([#12](https://github.com/dev-zetta/aoostar-rs/issues/12)).
 - aster-sysinfo tool: make sensor file world-readable, create all parent directories.
 
 ### Added
-- Simple sensor panel with a file-based data source ([#6](https://github.com/zehnm/aoostar-rs/issues/6)). 
-- Initial support for fan-, progress-, & pointer-sensors ([#8](https://github.com/zehnm/aoostar-rs/pull/8)).
-- Use [mdBook](https://rust-lang.github.io/mdBook/) for documentation and publish user guide to GitHub pages ([#10](https://github.com/zehnm/aoostar-rs/pull/10)).
+- Simple sensor panel with a file-based data source ([#6](https://github.com/dev-zetta/aoostar-rs/issues/6)). 
+- Initial support for fan-, progress-, & pointer-sensors ([#8](https://github.com/dev-zetta/aoostar-rs/pull/8)).
+- Use [mdBook](https://rust-lang.github.io/mdBook/) for documentation and publish user guide to GitHub pages ([#10](https://github.com/dev-zetta/aoostar-rs/pull/10)).
 - Initial `aster-sysinfo` tool for providing sensor values in a text file for `asterctl`.
 
 ### Changed

@@ -2,7 +2,7 @@
 
 ## Switch Off LCD on Boot
 
-The systemd unit [lcd-off.service](https://github.com/zehnm/aoostar-rs/blob/main/linux/lcd-off.service)
+The systemd unit [lcd-off.service](https://github.com/dev-zetta/aoostar-rs/blob/main/linux/lcd-off.service)
 can be installed to automatically switch off the embedded LCD on boot.
 
 The unit file has been tailored to Debian-based Linux distros and has been tested on Proxmox 8.4 and Ubuntu 25.04.

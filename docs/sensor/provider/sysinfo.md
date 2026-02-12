@@ -1,6 +1,6 @@
 # aster-sysinfo
 
-The [aster-sysinfo](https://github.com/zehnm/aoostar-rs/blob/main/crates/aster-sysinfo) crate gathers system sensor
+The [aster-sysinfo](https://github.com/dev-zetta/aoostar-rs/blob/main/crates/aster-sysinfo) crate gathers system sensor
 values using the [sysinfo](https://github.com/GuillaumeGomez/sysinfo) crate.
 
 It serves two purposes:
