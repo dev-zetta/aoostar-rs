@@ -6,7 +6,7 @@
 
 use asterctl::cfg::{MonitorConfig, load_custom_panel};
 use asterctl::render::PanelRenderer;
-use asterctl::sensors::{read_filter_file, read_key_value_file, start_file_slurper};
+use asterctl::sensors::{read_filter_file, read_key_value_file, start_sensor_poller};
 use asterctl::{cfg, img};
 use asterctl_lcd::{AooScreen, AooScreenBuilder, DISPLAY_SIZE};
 
@@ -138,7 +138,6 @@ fn main() -> anyhow::Result<()> {
 
         let cfg_dir = PathBuf::from(args.config_dir);
         let font_dir = PathBuf::from(args.font_dir);
-        let sensor_path = PathBuf::from(args.sensor_path);
         let mapping_cfg = PathBuf::from(args.sensor_mapping);
         let cfg = load_configuration(&config, &cfg_dir, args.panels, &mapping_cfg)?;
         run_sensor_panel(
@@ -146,7 +145,6 @@ fn main() -> anyhow::Result<()> {
             cfg,
             cfg_dir,
             font_dir,
-            sensor_path,
             img_save_path,
         )?;
         return Ok(());
@@ -236,7 +234,6 @@ fn run_sensor_panel<B: Into<PathBuf>>(
     cfg: MonitorConfig,
     config_dir: B,
     font_dir: B,
-    sensor_path: B,
     img_save_path: Option<B>,
 ) -> anyhow::Result<()> {
     let font_dir = font_dir.into();
@@ -253,9 +250,10 @@ fn run_sensor_panel<B: Into<PathBuf>>(
 
     let sensor_values: Arc<RwLock<HashMap<String, String>>> = Arc::new(RwLock::new(HashMap::new()));
 
-    start_file_slurper(
-        sensor_path,
+    let poller_refresh = Duration::from_millis((cfg.setup.refresh * 1000f32) as u64);
+    start_sensor_poller(
         sensor_values.clone(),
+        poller_refresh,
         cfg.sensor_filter.clone(),
     )?;
 

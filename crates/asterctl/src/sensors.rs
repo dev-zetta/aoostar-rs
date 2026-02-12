@@ -278,6 +278,95 @@ pub fn read_filter_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Option<Vec<Re
     }
 }
 
+/// Start a direct sensor poller using SysinfoSource, eliminating the need for external scripts
+/// and text files. Sensor values are read directly from the system and stored in the shared HashMap.
+///
+/// # Arguments
+///
+/// * `values`: a shared, reader-writer lock protected HashMap
+/// * `refresh`: sensor refresh interval
+/// * `sensor_filter`: Optional list of regex filters to filter out matching sensor keys.
+///
+/// returns: Result<(), Error>
+pub fn start_sensor_poller(
+    values: Arc<RwLock<HashMap<String, String>>>,
+    refresh: std::time::Duration,
+    sensor_filter: Option<Vec<Regex>>,
+) -> anyhow::Result<()> {
+    use aster_sysinfo::{SysinfoSource, update_linux_storage_sensors};
+    use std::thread::sleep;
+    use std::time::Instant;
+
+    let mut sysinfo_source = SysinfoSource::new();
+
+    // Initial sensor read
+    {
+        sysinfo_source.refresh();
+        let mut raw_sensors = HashMap::with_capacity(64);
+        if let Err(e) = sysinfo_source.update_sensors(&mut raw_sensors) {
+            warn!("Initial sensor update failed: {e}");
+        }
+        if let Err(e) = update_linux_storage_sensors(&mut raw_sensors, false) {
+            warn!("Initial storage sensor update failed: {e}");
+        }
+
+        let mut val = values.write().expect("Failed to lock values");
+        apply_sensor_values(&mut val, &raw_sensors, sensor_filter.as_deref());
+    }
+
+    info!("Starting direct sensor poller with refresh={}ms", refresh.as_millis());
+
+    std::thread::spawn(move || {
+        let disk_refresh = std::time::Duration::from_secs(300);
+        let mut disk_refresh_time = Instant::now();
+
+        loop {
+            let upd_start_time = Instant::now();
+
+            sysinfo_source.refresh();
+            let mut raw_sensors = HashMap::with_capacity(64);
+            if let Err(e) = sysinfo_source.update_sensors(&mut raw_sensors) {
+                warn!("Sensor update failed: {e}");
+            }
+
+            if disk_refresh_time.elapsed() > disk_refresh {
+                debug!("Refreshing individual disks");
+                if let Err(e) = update_linux_storage_sensors(&mut raw_sensors, false) {
+                    warn!("Storage sensor update failed: {e}");
+                }
+                disk_refresh_time = Instant::now();
+            }
+
+            {
+                let mut val = values.write().expect("Poisoned sensor RwLock");
+                apply_sensor_values(&mut val, &raw_sensors, sensor_filter.as_deref());
+            }
+
+            let elapsed = upd_start_time.elapsed();
+            if refresh > elapsed {
+                sleep(refresh - elapsed);
+            }
+        }
+    });
+
+    Ok(())
+}
+
+fn apply_sensor_values(
+    target: &mut HashMap<String, String>,
+    source: &HashMap<String, String>,
+    sensor_filter: Option<&[Regex]>,
+) {
+    for (key, value) in source {
+        if let Some(filter) = sensor_filter
+            && is_filtered(key, filter)
+        {
+            continue;
+        }
+        target.insert(key.clone(), value.clone());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
