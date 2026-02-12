@@ -229,6 +229,17 @@ fn run_sensor_panel<B: Into<PathBuf>>(
     // Wait for initial sensor data to be available
     sleep(Duration::from_millis(1500));
 
+    // Log all discovered sensor keys
+    {
+        let values = sensor_values.read().expect("RwLock is poisoned");
+        let mut keys: Vec<&String> = values.keys().collect();
+        keys.sort();
+        info!("Discovered {} sensor keys:", keys.len());
+        for key in &keys {
+            info!("  {}: {}", key, values.get(*key).map(|v| v.as_str()).unwrap_or("N/A"));
+        }
+    }
+
     // Build initial page list from discovered sensors
     let mut pages = build_pages(&templates, &sensor_values, &cfg);
     if pages.is_empty() {
@@ -272,12 +283,19 @@ fn run_sensor_panel<B: Into<PathBuf>>(
 
         match page {
             PageKind::Sensor(sp) => {
+                let value = sensor_values
+                    .read()
+                    .expect("RwLock is poisoned")
+                    .get(&sp.sensor_key)
+                    .cloned()
+                    .unwrap_or_else(|| "N/A".to_string());
                 info!(
-                    "Page {}/{}: '{}' [{}]",
+                    "Page {}/{}: '{}' [{}] = {}",
                     page_idx + 1,
                     pages.len(),
                     sp.display_name,
-                    sp.sensor_key
+                    sp.sensor_key,
+                    value
                 );
             }
             PageKind::Time(label) => {
