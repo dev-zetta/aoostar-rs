@@ -3,7 +3,13 @@
     "switchTime": "30",
     "refresh": 1,
     "sensorPageTime": 10,
-    "timePage": "DATE_h_m_s_1"
+    "timePage": "DATE_h_m_s_1",
+    "sensorPageLabel": {
+      "fontFamily": "HarmonyOS_Sans_SC_Bold",
+      "fontSize": 28,
+      "fontColor": "#b4b4b4",
+      "y": 40
+    }
   },
   "mianban": [
     1

@@ -327,7 +327,7 @@ fn run_sensor_panel<B: Into<PathBuf>>(
                 PageKind::Sensor(panel_idx, sensor_idx) => {
                     let panel = &cfg.panels[*panel_idx];
                     let values = sensor_values.read().expect("RwLock is poisoned");
-                    match renderer.render_sensor_page(panel, *sensor_idx, &values) {
+                    match renderer.render_sensor_page(panel, *sensor_idx, &values, cfg.setup.sensor_page_label.as_ref()) {
                         Ok(image) => screen.send_image(&image)?,
                         Err(e) => error!(
                             "Error rendering sensor page '{}'/[{}]: {e:?}",

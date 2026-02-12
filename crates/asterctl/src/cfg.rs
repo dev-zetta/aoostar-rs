@@ -207,8 +207,11 @@ pub struct Setup {
     /// Date/time label for a dedicated time page in the sensor page rotation.
     /// Example values: "DATE_h_m_s_1" (HH:MM:SS), "DATE_h_m_3" (HH:MM), "DATE_m_d_h_m_2" (MM/DD HH:MM).
     /// If not set, no time page is shown.
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub time_page: Option<String>,
+    /// Configuration for the sensor name label shown on each sensor page.
+    /// If not set, defaults are used.
+    pub sensor_page_label: Option<SensorPageLabel>,
     /*
     // The following fields of the AOOSTAR-X json configuration file are NOT used in `asterctl`
     /// Default: true
@@ -276,6 +279,24 @@ pub enum SensorDirection {
     RightToLeft = 2,
     TopToBottom = 3,
     BottomToTop = 4,
+}
+
+/// Configuration for the sensor name label displayed on sensor pages.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SensorPageLabel {
+    /// Font family name. Default: system default font
+    pub font_family: Option<String>,
+    /// Font size in points. Default: 28
+    pub font_size: Option<f32>,
+    /// Font color in `#RRGGBB` notation or -1 for default. Default: light gray
+    pub font_color: Option<FontColor>,
+    /// X position. If not set, the label is centered horizontally.
+    #[serde(default, deserialize_with = "option_f32_as_rounded_i32")]
+    pub x: Option<i32>,
+    /// Y position. Default: 40
+    #[serde(default, deserialize_with = "option_f32_as_rounded_i32")]
+    pub y: Option<i32>,
 }
 
 /// Custom DIY panel definition
@@ -627,4 +648,12 @@ where
 {
     let rounded = f32::deserialize(deserializer).map(f32::round)?;
     Ok(rounded as i32)
+}
+
+fn option_f32_as_rounded_i32<'de, D>(deserializer: D) -> Result<Option<i32>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let rounded = f32::deserialize(deserializer).map(f32::round)?;
+    Ok(Some(rounded as i32))
 }
