@@ -37,9 +37,9 @@ impl SysinfoSource {
     pub fn new() -> Self {
         Self {
             sys: System::new_all(),
-            disks: Disks::new(),
-            components: Components::new(),
-            networks: Networks::new(),
+            disks: Disks::new_with_refreshed_list(),
+            components: Components::new_with_refreshed_list(),
+            networks: Networks::new_with_refreshed_list(),
             last_refresh: None,
             refresh_duration: None,
         }
