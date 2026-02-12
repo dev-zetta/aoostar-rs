@@ -120,10 +120,15 @@ pub struct MonitorConfig {
     /// Internal index of the currently active panel. 1-based!
     #[serde(skip)]
     active_panel_idx: Option<usize>,
-    /// Internal sensor label mapping
-    #[serde(skip)]
+    /// Sensor label mapping: panel label → sysinfo label.
+    /// Can be specified inline in the JSON or loaded from an external mapping file.
+    #[serde(default, rename = "sensorMapping")]
     sensor_mapping: Option<HashMap<String, String>>,
-    /// Internal sensor filter
+    /// Sensor filter patterns (regex strings) to exclude matching sensor keys.
+    /// Can be specified inline in the JSON or loaded from an external filter file.
+    #[serde(default, rename = "sensorFilter")]
+    sensor_filter_patterns: Option<Vec<String>>,
+    /// Compiled sensor filter regexes (built from sensor_filter_patterns or external file).
     #[serde(skip)]
     pub sensor_filter: Option<Vec<Regex>>,
 }
@@ -169,6 +174,20 @@ impl MonitorConfig {
         self.active_panels.push(self.panels.len() as u32);
     }
 
+    /// Returns true if the config contains an inline sensor mapping.
+    pub fn has_sensor_mapping(&self) -> bool {
+        self.sensor_mapping.as_ref().is_some_and(|m| !m.is_empty())
+    }
+
+    /// Apply the inline sensor mapping (deserialized from JSON) to all panels.
+    ///
+    /// This must be called after loading the config if the mapping was provided inline.
+    pub fn apply_sensor_mapping(&mut self) {
+        if let Some(mapping) = self.sensor_mapping.take() {
+            self.set_sensor_mapping(mapping);
+        }
+    }
+
     /// Apply a sensor label mapping on the included panels.
     ///
     /// The mapping will also be applied on any custom panel added in the future with [include_custom_panel].
@@ -180,6 +199,29 @@ impl MonitorConfig {
             panel.map_sensor_labels(&mapping);
         }
         self.sensor_mapping = Some(mapping);
+    }
+
+    /// Compile inline sensor filter patterns into regexes.
+    ///
+    /// Returns true if inline patterns were present and compiled successfully.
+    pub fn compile_sensor_filters(&mut self) -> bool {
+        if let Some(patterns) = &self.sensor_filter_patterns {
+            let filters: Vec<Regex> = patterns
+                .iter()
+                .filter_map(|p| match Regex::new(p) {
+                    Ok(r) => Some(r),
+                    Err(e) => {
+                        warn!("Invalid sensor filter regex '{p}': {e}");
+                        None
+                    }
+                })
+                .collect();
+            if !filters.is_empty() {
+                self.sensor_filter = Some(filters);
+                return true;
+            }
+        }
+        false
     }
 }
 

@@ -11,6 +11,26 @@
       "y": 40
     }
   },
+  "sensorMapping": {
+    "cpu_percent": "cpu_usage_percent",
+    "cpu_temperature": "temperature_cpu",
+    "memory_usage": "mem_usage_percent",
+    "memory_Temperature": "temperature_memory",
+    "gpu_temperature": "temperature_gpu",
+    "net_upload_speed": "network_enp100s0f1np1_upload_speed",
+    "net_download_speed": "network_enp100s0f1np1_download_speed",
+    "net_ip_address": "network_enp100s0f1np1_address0",
+    "storage_ssd[0]['temperature']": "temperature_nvme_Composite_KINGSTON_OM8PGP41024Q-A0",
+    "storage_ssd[0]['used']": "storage_ssd[0]_usage_percent",
+    "storage_ssd[1]['temperature']": "temperature_nvme_Composite_Samsung_SSD_990_EVO_Plus_2TB",
+    "storage_ssd[1]['used']": "storage_ssd[1]_usage_percent",
+    "storage_ssd[2]['used']": "storage_ssd[2]_usage_percent",
+    "storage_ssd[3]['used']": "storage_ssd[3]_usage_percent",
+    "storage_ssd[4]['used']": "storage_ssd[4]_usage_percent"
+  },
+  "sensorFilter": [
+    "^temperature_.*#unit"
+  ],
   "mianban": [
     1
   ],

@@ -280,6 +280,8 @@ impl PanelRenderer {
             self.render_sensor(&mut final_image, sensor, &value, &unit)?;
         } else if let Some(value) = get_date_time_value(&sensor.label, &now_dt) {
             self.render_sensor(&mut final_image, sensor, &value, &unit)?;
+        } else {
+            self.render_sensor(&mut final_image, sensor, "N/A", "")?;
         }
 
         self.composite_layers(&mut final_image);
