@@ -200,57 +200,39 @@ impl PanelRenderer {
         Ok(image)
     }
 
-    /// Render a single sensor page: one sensor on the panel background.
+    /// Render a single sensor page from a template and a matched sensor key.
     ///
     /// # Arguments
     ///
-    /// * `panel`: the panel configuration (used for background image)
-    /// * `sensor_index`: index of the sensor to render
-    /// * `values`: current values for the defined panel sensors in a shared HashMap
+    /// * `sensor`: the sensor display template (font, position, unit, etc.)
+    /// * `sensor_key`: the actual sensor key to look up in `values`
+    /// * `display_name`: the resolved display name for the sensor label
+    /// * `values`: current sensor values in a shared HashMap
+    /// * `label_cfg`: optional label configuration for the sensor name
     ///
     /// returns: a rendered sensor page image in [RgbaImage] format, or an [ImageProcessingError] in case of an error.
-    pub fn render_sensor_page(
+    pub fn render_sensor_page_from_template(
         &mut self,
-        panel: &Panel,
-        sensor_index: usize,
+        sensor: &Sensor,
+        sensor_key: &str,
+        display_name: &str,
         values: &HashMap<String, String>,
         label_cfg: Option<&SensorPageLabel>,
     ) -> Result<RgbaImage, ImageProcessingError> {
-        let sensor = &panel.sensor[sensor_index];
-        debug!(
-            "Rendering sensor page {}/{} of panel '{}': {}",
-            sensor_index + 1,
-            panel.sensor.len(),
-            panel.friendly_name(),
-            sensor.label
-        );
+        debug!("Rendering sensor page: {display_name} [{sensor_key}]");
 
         let now = Instant::now();
-        let background = if let Some(img) = &panel.img
-            && let Some(background) = self.image_cache.get(img, Some(self.size))
-        {
-            background.clone()
-        } else {
-            RgbaImage::new(self.size.0, self.size.1)
-        };
+        let mut final_image = RgbaImage::new(self.size.0, self.size.1);
         self.composite_layer_map.clear();
 
-        let now_dt: DateTime<Local> = Local::now();
-        let value = values.get(&sensor.label).cloned();
+        let value = values.get(sensor_key).cloned();
         let unit = values
-            .get(&format!("{}#unit", sensor.label))
+            .get(&format!("{sensor_key}#unit"))
             .cloned()
             .or_else(|| sensor.unit.clone())
             .unwrap_or_default();
 
-        let mut final_image = background;
-
         // Draw sensor name label above the value
-        let name_text = sensor
-            .name
-            .as_deref()
-            .or(sensor.item_name.as_deref())
-            .unwrap_or(&sensor.label);
         let name_font = if let Some(font_family) = label_cfg.and_then(|c| c.font_family.as_deref()) {
             self.font_handler.get_ttf_font_or_default(font_family)
         } else {
@@ -265,7 +247,7 @@ impl PanelRenderer {
             .and_then(|c| c.font_color)
             .map(|c| c.into())
             .unwrap_or(Rgba([180, 180, 180, 255]));
-        let name_sz = text_size(name_scale, &name_font, name_text);
+        let name_sz = text_size(name_scale, &name_font, display_name);
         let name_x = label_cfg
             .and_then(|c| c.x)
             .unwrap_or_else(|| (self.size.0 as i32 - name_sz.0 as i32) / 2);
@@ -277,12 +259,10 @@ impl PanelRenderer {
             name_y,
             name_scale,
             &name_font,
-            name_text,
+            display_name,
         );
 
         if let Some(value) = value {
-            self.render_sensor(&mut final_image, sensor, &value, &unit)?;
-        } else if let Some(value) = get_date_time_value(&sensor.label, &now_dt) {
             self.render_sensor(&mut final_image, sensor, &value, &unit)?;
         } else {
             self.render_sensor(&mut final_image, sensor, "N/A", "")?;
@@ -294,9 +274,8 @@ impl PanelRenderer {
 
         if self.save_render_img {
             let name = format!(
-                "render_{}_s{}{}.png",
-                panel.friendly_name(),
-                sensor_index,
+                "render_{}{}.png",
+                sensor_key,
                 self.img_suffix.as_deref().unwrap_or_default()
             );
             if let Err(e) = final_image.save(self.img_save_path.join(name)) {
@@ -305,6 +284,24 @@ impl PanelRenderer {
         }
 
         Ok(final_image)
+    }
+
+    /// Render a single sensor page: one sensor on the panel background.
+    /// (Legacy method kept for backward compatibility)
+    pub fn render_sensor_page(
+        &mut self,
+        panel: &Panel,
+        sensor_index: usize,
+        values: &HashMap<String, String>,
+        label_cfg: Option<&SensorPageLabel>,
+    ) -> Result<RgbaImage, ImageProcessingError> {
+        let sensor = &panel.sensor[sensor_index];
+        let display_name = sensor
+            .name
+            .as_deref()
+            .or(sensor.item_name.as_deref())
+            .unwrap_or(&sensor.label);
+        self.render_sensor_page_from_template(sensor, &sensor.label, display_name, values, label_cfg)
     }
 
     /// Render all panel sensors with the given values on a background image

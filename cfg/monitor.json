@@ -2,7 +2,7 @@
   "setup": {
     "switchTime": "30",
     "refresh": 1,
-    "sensorPageTime": 10,
+    "sensorPageTime": 60,
     "timePage": "DATE_h_m_s_1",
     "sensorPageLabel": {
       "fontFamily": "HarmonyOS_Sans_SC_Bold",
@@ -10,26 +10,9 @@
       "fontColor": "#e0e0e0",
       "y": 20
     },
-    "timePageFontSize": 96,
+    "timePageFontSize": 128,
     "displayOnHour": 8,
     "displayOffHour": 23
-  },
-  "sensorMapping": {
-    "cpu_percent": "cpu_usage_percent",
-    "cpu_temperature": "temperature_cpu",
-    "memory_usage": "mem_usage_percent",
-    "memory_Temperature": "temperature_memory",
-    "gpu_temperature": "temperature_gpu",
-    "net_upload_speed": "network_enp100s0f1np1_upload_speed",
-    "net_download_speed": "network_enp100s0f1np1_download_speed",
-    "net_ip_address": "network_enp100s0f1np1_address0",
-    "storage_ssd[0]['temperature']": "temperature_nvme_Composite_KINGSTON_OM8PGP41024Q-A0",
-    "storage_ssd[0]['used']": "storage_ssd[0]_usage_percent",
-    "storage_ssd[1]['temperature']": "temperature_nvme_Composite_Samsung_SSD_990_EVO_Plus_2TB",
-    "storage_ssd[1]['used']": "storage_ssd[1]_usage_percent",
-    "storage_ssd[2]['used']": "storage_ssd[2]_usage_percent",
-    "storage_ssd[3]['used']": "storage_ssd[3]_usage_percent",
-    "storage_ssd[4]['used']": "storage_ssd[4]_usage_percent"
   },
   "sensorFilter": [
     "^temperature_.*#unit"
@@ -43,7 +26,7 @@
       "sensor": [
         {
           "mode": 1,
-          "label": "cpu_temperature",
+          "match": "^temperature_cpu$",
           "name": "CPU Temp",
           "x": 480,
           "y": 200,
@@ -56,7 +39,7 @@
         },
         {
           "mode": 1,
-          "label": "cpu_percent",
+          "match": "^cpu_usage_percent$",
           "name": "CPU Usage",
           "x": 480,
           "y": 200,
@@ -69,33 +52,7 @@
         },
         {
           "mode": 1,
-          "label": "gpu_temperature",
-          "name": "GPU Temp",
-          "x": 480,
-          "y": 200,
-          "fontFamily": "HarmonyOS_Sans_SC_Bold",
-          "fontSize": 120,
-          "fontColor": -1,
-          "textAlign": "center",
-          "decimalDigits": 0,
-          "unit": " \u00b0C"
-        },
-        {
-          "mode": 1,
-          "label": "gpu_core",
-          "name": "GPU Usage",
-          "x": 480,
-          "y": 200,
-          "fontFamily": "HarmonyOS_Sans_SC_Bold",
-          "fontSize": 120,
-          "fontColor": -1,
-          "textAlign": "center",
-          "decimalDigits": 0,
-          "unit": " %"
-        },
-        {
-          "mode": 1,
-          "label": "memory_usage",
+          "match": "^mem_usage_percent$",
           "name": "RAM Usage",
           "x": 480,
           "y": 200,
@@ -108,20 +65,33 @@
         },
         {
           "mode": 1,
-          "label": "motherboard_temperature",
-          "name": "Board Temp",
+          "match": "^temperature_nvme_Composite_(.+)$",
+          "name": "NVMe {1}",
           "x": 480,
           "y": 200,
           "fontFamily": "HarmonyOS_Sans_SC_Bold",
-          "fontSize": 100,
+          "fontSize": 80,
           "fontColor": -1,
           "textAlign": "center",
-          "decimalDigits": 1,
+          "decimalDigits": 0,
           "unit": " \u00b0C"
         },
         {
           "mode": 1,
-          "label": "net_ip_address",
+          "match": "^storage_ssd\\[(\\d+)\\]_usage_percent$",
+          "name": "SSD {1} Usage",
+          "x": 480,
+          "y": 200,
+          "fontFamily": "HarmonyOS_Sans_SC_Bold",
+          "fontSize": 120,
+          "fontColor": -1,
+          "textAlign": "center",
+          "decimalDigits": 0,
+          "unit": " %"
+        },
+        {
+          "mode": 1,
+          "match": "^network_.+_address\\d+$",
           "name": "IP Address",
           "x": 480,
           "y": 200,
@@ -132,7 +102,7 @@
         },
         {
           "mode": 1,
-          "label": "net_upload_speed",
+          "match": "^network_.+_upload_speed$",
           "name": "Upload",
           "x": 480,
           "y": 200,
@@ -143,7 +113,7 @@
         },
         {
           "mode": 1,
-          "label": "net_download_speed",
+          "match": "^network_.+_download_speed$",
           "name": "Download",
           "x": 480,
           "y": 200,
@@ -151,136 +121,6 @@
           "fontSize": 80,
           "fontColor": -1,
           "textAlign": "center"
-        },
-        {
-          "mode": 1,
-          "label": "storage_ssd[0]['temperature']",
-          "name": "SSD 1 Temp",
-          "x": 480,
-          "y": 200,
-          "fontFamily": "HarmonyOS_Sans_SC_Bold",
-          "fontSize": 120,
-          "fontColor": -1,
-          "textAlign": "center",
-          "decimalDigits": 0,
-          "unit": " \u00b0C"
-        },
-        {
-          "mode": 1,
-          "label": "storage_ssd[0]['used']",
-          "name": "SSD 1 Used",
-          "x": 480,
-          "y": 200,
-          "fontFamily": "HarmonyOS_Sans_SC_Bold",
-          "fontSize": 120,
-          "fontColor": -1,
-          "textAlign": "center",
-          "decimalDigits": 0,
-          "unit": " %"
-        },
-        {
-          "mode": 1,
-          "label": "storage_ssd[1]['temperature']",
-          "name": "SSD 2 Temp",
-          "x": 480,
-          "y": 200,
-          "fontFamily": "HarmonyOS_Sans_SC_Bold",
-          "fontSize": 120,
-          "fontColor": -1,
-          "textAlign": "center",
-          "decimalDigits": 0,
-          "unit": " \u00b0C"
-        },
-        {
-          "mode": 1,
-          "label": "storage_ssd[1]['used']",
-          "name": "SSD 2 Used",
-          "x": 480,
-          "y": 200,
-          "fontFamily": "HarmonyOS_Sans_SC_Bold",
-          "fontSize": 120,
-          "fontColor": -1,
-          "textAlign": "center",
-          "decimalDigits": 0,
-          "unit": " %"
-        },
-        {
-          "mode": 1,
-          "label": "storage_ssd[2]['temperature']",
-          "name": "SSD 3 Temp",
-          "x": 480,
-          "y": 200,
-          "fontFamily": "HarmonyOS_Sans_SC_Bold",
-          "fontSize": 120,
-          "fontColor": -1,
-          "textAlign": "center",
-          "decimalDigits": 0,
-          "unit": " \u00b0C"
-        },
-        {
-          "mode": 1,
-          "label": "storage_ssd[2]['used']",
-          "name": "SSD 3 Used",
-          "x": 480,
-          "y": 200,
-          "fontFamily": "HarmonyOS_Sans_SC_Bold",
-          "fontSize": 120,
-          "fontColor": -1,
-          "textAlign": "center",
-          "decimalDigits": 0,
-          "unit": " %"
-        },
-        {
-          "mode": 1,
-          "label": "storage_ssd[3]['temperature']",
-          "name": "SSD 4 Temp",
-          "x": 480,
-          "y": 200,
-          "fontFamily": "HarmonyOS_Sans_SC_Bold",
-          "fontSize": 120,
-          "fontColor": -1,
-          "textAlign": "center",
-          "decimalDigits": 0,
-          "unit": " \u00b0C"
-        },
-        {
-          "mode": 1,
-          "label": "storage_ssd[3]['used']",
-          "name": "SSD 4 Used",
-          "x": 480,
-          "y": 200,
-          "fontFamily": "HarmonyOS_Sans_SC_Bold",
-          "fontSize": 120,
-          "fontColor": -1,
-          "textAlign": "center",
-          "decimalDigits": 0,
-          "unit": " %"
-        },
-        {
-          "mode": 1,
-          "label": "storage_ssd[4]['temperature']",
-          "name": "SSD 5 Temp",
-          "x": 480,
-          "y": 200,
-          "fontFamily": "HarmonyOS_Sans_SC_Bold",
-          "fontSize": 120,
-          "fontColor": -1,
-          "textAlign": "center",
-          "decimalDigits": 0,
-          "unit": " \u00b0C"
-        },
-        {
-          "mode": 1,
-          "label": "storage_ssd[4]['used']",
-          "name": "SSD 5 Used",
-          "x": 480,
-          "y": 200,
-          "fontFamily": "HarmonyOS_Sans_SC_Bold",
-          "fontSize": 120,
-          "fontColor": -1,
-          "textAlign": "center",
-          "decimalDigits": 0,
-          "unit": " %"
         }
       ]
     }

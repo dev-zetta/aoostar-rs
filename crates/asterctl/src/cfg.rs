@@ -14,7 +14,6 @@ use regex::Regex;
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::collections::HashMap;
 use std::io::BufReader;
 use std::num::ParseIntError;
 use std::ops::Deref;
@@ -120,10 +119,6 @@ pub struct MonitorConfig {
     /// Internal index of the currently active panel. 1-based!
     #[serde(skip)]
     active_panel_idx: Option<usize>,
-    /// Sensor label mapping: panel label → sysinfo label.
-    /// Can be specified inline in the JSON or loaded from an external mapping file.
-    #[serde(default, rename = "sensorMapping")]
-    sensor_mapping: Option<HashMap<String, String>>,
     /// Sensor filter patterns (regex strings) to exclude matching sensor keys.
     /// Can be specified inline in the JSON or loaded from an external filter file.
     #[serde(default, rename = "sensorFilter")]
@@ -159,46 +154,12 @@ impl MonitorConfig {
         None
     }
 
-    /// Adds a custom panel to the application and maps sensor labels if applicable.
+    /// Adds a custom panel to the application.
     ///
     /// The panel is marked active and will be returned with [get_next_active_panel] when it is its turn.
-    ///
-    /// # Arguments
-    ///
-    /// * `panel` - the Panel to include in the active panels.
-    pub fn include_custom_panel(&mut self, mut panel: Panel) {
-        if let Some(mapping) = &self.sensor_mapping {
-            panel.map_sensor_labels(mapping);
-        }
+    pub fn include_custom_panel(&mut self, panel: Panel) {
         self.panels.push(panel);
         self.active_panels.push(self.panels.len() as u32);
-    }
-
-    /// Returns true if the config contains an inline sensor mapping.
-    pub fn has_sensor_mapping(&self) -> bool {
-        self.sensor_mapping.as_ref().is_some_and(|m| !m.is_empty())
-    }
-
-    /// Apply the inline sensor mapping (deserialized from JSON) to all panels.
-    ///
-    /// This must be called after loading the config if the mapping was provided inline.
-    pub fn apply_sensor_mapping(&mut self) {
-        if let Some(mapping) = self.sensor_mapping.take() {
-            self.set_sensor_mapping(mapping);
-        }
-    }
-
-    /// Apply a sensor label mapping on the included panels.
-    ///
-    /// The mapping will also be applied on any custom panel added in the future with [include_custom_panel].
-    ///
-    /// **Attention**: this method may only be called once at startup.
-    /// Dynamically changing mappings are not supported, and the original sensor labels are not preserved.
-    pub fn set_sensor_mapping(&mut self, mapping: HashMap<String, String>) {
-        for panel in self.panels.iter_mut() {
-            panel.map_sensor_labels(&mapping);
-        }
-        self.sensor_mapping = Some(mapping);
     }
 
     /// Compile inline sensor filter patterns into regexes.
@@ -386,17 +347,10 @@ impl Panel {
             .unwrap_or_else(|| "panel".into())
     }
 
-    fn map_sensor_labels(&mut self, mapping: &HashMap<String, String>) {
-        for sensor in self.sensor.iter_mut() {
-            if let Some(new_label) = mapping.get(&sensor.label) {
-                sensor.label = new_label.clone();
-            }
-        }
-    }
 }
 
 /// One Data Display Unit
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Sensor {
     /// Sensor mode: text, fan, progress, pointer
@@ -417,7 +371,14 @@ pub struct Sensor {
     /// Label name for custom panels.
     pub item_name: Option<String>,
     /// Label identifier, also used as data source identifier.
+    /// When `match_pattern` is set, this field is unused for value lookup.
+    #[serde(default)]
     pub label: String,
+    /// Regex pattern to match sensor keys. When set, this sensor acts as a template:
+    /// all matching sensor keys generate a page using this sensor's display config.
+    /// Capture groups can be referenced in `name` as `{1}`, `{2}`, etc.
+    #[serde(default, rename = "match")]
+    pub match_pattern: Option<String>,
     /// Sensor value. Ignored: value is used from a sensor source
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub value: Option<String>, // "" or numbers, so Option<String>

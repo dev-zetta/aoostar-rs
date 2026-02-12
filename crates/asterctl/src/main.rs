@@ -4,7 +4,7 @@
 #![forbid(non_ascii_idents)]
 #![deny(unsafe_code)]
 
-use asterctl::cfg::{MonitorConfig, load_custom_panel};
+use asterctl::cfg::{MonitorConfig, Sensor, load_custom_panel};
 use asterctl::render::PanelRenderer;
 use asterctl::sensors::start_sensor_poller;
 use asterctl::{cfg, img};
@@ -14,7 +14,8 @@ use anyhow::anyhow;
 use chrono::Timelike;
 use clap::Parser;
 use env_logger::Env;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
+use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -177,14 +178,6 @@ fn load_configuration<P: AsRef<Path>>(
         }
     }
 
-    // Apply sensor label mapping from inline config
-    if cfg.has_sensor_mapping() {
-        info!("Applying sensor mapping from config");
-        cfg.apply_sensor_mapping();
-    } else {
-        info!("No sensor mapping defined in config");
-    }
-
     // Compile sensor filter regexes from inline config
     if cfg.compile_sensor_filters() {
         info!("Using sensor filter from config");
@@ -225,26 +218,17 @@ fn run_sensor_panel<B: Into<PathBuf>>(
     let sensor_page_time =
         Duration::from_secs_f32(cfg.setup.sensor_page_time.unwrap_or(10.0));
 
-    // Collect all pages: sensor pages from active panels + optional time page
-    let mut pages: Vec<PageKind> = Vec::new();
-    for &active in &cfg.active_panels {
-        if active == 0 || active > cfg.panels.len() as u32 {
-            continue;
-        }
-        let panel_idx = active as usize - 1;
-        let panel = &cfg.panels[panel_idx];
-        for sensor_idx in 0..panel.sensor.len() {
-            pages.push(PageKind::Sensor(panel_idx, sensor_idx));
-        }
-    }
+    // Compile sensor template patterns from active panels
+    let templates = compile_sensor_templates(&cfg);
+    info!("Compiled {} sensor templates", templates.len());
 
-    if let Some(time_label) = &cfg.setup.time_page {
-        info!("Time page enabled: {time_label}");
-        pages.push(PageKind::Time(time_label.clone()));
-    }
+    // Wait for initial sensor data to be available
+    sleep(Duration::from_millis(1500));
 
+    // Build initial page list from discovered sensors
+    let mut pages = build_pages(&templates, &sensor_values, &cfg);
     if pages.is_empty() {
-        return Err(anyhow!("No pages to display"));
+        return Err(anyhow!("No pages to display (no sensors matched any template)"));
     }
 
     info!(
@@ -267,17 +251,28 @@ fn run_sensor_panel<B: Into<PathBuf>>(
     // page cycling loop
     let mut page_idx = 0;
     loop {
+        // Rebuild pages periodically to pick up new sensors
+        if page_idx == 0 {
+            let new_pages = build_pages(&templates, &sensor_values, &cfg);
+            if !new_pages.is_empty() {
+                pages = new_pages;
+            }
+        }
+
+        if page_idx >= pages.len() {
+            page_idx = 0;
+        }
+
         let page = &pages[page_idx];
 
         match page {
-            PageKind::Sensor(panel_idx, sensor_idx) => {
-                let panel = &cfg.panels[*panel_idx];
+            PageKind::Sensor(sp) => {
                 info!(
-                    "Page {}/{}: panel '{}', sensor '{}'",
+                    "Page {}/{}: '{}' [{}]",
                     page_idx + 1,
                     pages.len(),
-                    panel.friendly_name(),
-                    panel.sensor[*sensor_idx].label
+                    sp.display_name,
+                    sp.sensor_key
                 );
             }
             PageKind::Time(label) => {
@@ -316,10 +311,15 @@ fn run_sensor_panel<B: Into<PathBuf>>(
             }
 
             let rendered = match page {
-                PageKind::Sensor(panel_idx, sensor_idx) => {
-                    let panel = &cfg.panels[*panel_idx];
+                PageKind::Sensor(sp) => {
                     let values = sensor_values.read().expect("RwLock is poisoned");
-                    renderer.render_sensor_page(panel, *sensor_idx, &values, cfg.setup.sensor_page_label.as_ref())
+                    renderer.render_sensor_page_from_template(
+                        &sp.template,
+                        &sp.sensor_key,
+                        &sp.display_name,
+                        &values,
+                        cfg.setup.sensor_page_label.as_ref(),
+                    )
                 }
                 PageKind::Time(label) => {
                     renderer.render_time_page(label, time_font_size)
@@ -350,8 +350,107 @@ fn run_sensor_panel<B: Into<PathBuf>>(
 }
 
 enum PageKind {
-    Sensor(usize, usize),
+    Sensor(SensorPage),
     Time(String),
+}
+
+struct SensorPage {
+    sensor_key: String,
+    display_name: String,
+    template: Sensor,
+}
+
+struct CompiledTemplate {
+    regex: Regex,
+    sensor: Sensor,
+}
+
+/// Compile regex patterns from sensor templates in active panels.
+fn compile_sensor_templates(cfg: &MonitorConfig) -> Vec<CompiledTemplate> {
+    let mut templates = Vec::new();
+    for &active in &cfg.active_panels {
+        if active == 0 || active > cfg.panels.len() as u32 {
+            continue;
+        }
+        let panel = &cfg.panels[active as usize - 1];
+        for sensor in &panel.sensor {
+            if let Some(pattern) = &sensor.match_pattern {
+                match Regex::new(pattern) {
+                    Ok(re) => templates.push(CompiledTemplate {
+                        regex: re,
+                        sensor: sensor.clone(),
+                    }),
+                    Err(e) => warn!("Invalid sensor match pattern '{pattern}': {e}"),
+                }
+            }
+        }
+    }
+    templates
+}
+
+/// Build pages by matching available sensor keys against compiled templates.
+/// Templates are matched in order; each sensor key matches at most one template.
+fn build_pages(
+    templates: &[CompiledTemplate],
+    sensor_values: &Arc<RwLock<HashMap<String, String>>>,
+    cfg: &MonitorConfig,
+) -> Vec<PageKind> {
+    let values = sensor_values.read().expect("RwLock is poisoned");
+    let mut sensor_keys: Vec<&String> = values.keys().collect();
+    sensor_keys.sort();
+
+    // For each template (in order), find all matching sensor keys.
+    // This preserves template order as the primary sort.
+    let mut matched_keys: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut pages: Vec<PageKind> = Vec::new();
+
+    for tmpl in templates {
+        let mut matches: Vec<(&String, String)> = Vec::new();
+        for key in &sensor_keys {
+            if matched_keys.contains(*key) {
+                continue;
+            }
+            if let Some(caps) = tmpl.regex.captures(key) {
+                let display_name = expand_template_name(&tmpl.sensor, &caps);
+                matches.push((key, display_name));
+            }
+        }
+        for (key, display_name) in matches {
+            matched_keys.insert(key.clone());
+            pages.push(PageKind::Sensor(SensorPage {
+                sensor_key: key.clone(),
+                display_name,
+                template: tmpl.sensor.clone(),
+            }));
+        }
+    }
+
+    // Add optional time page at the end
+    if let Some(time_label) = &cfg.setup.time_page {
+        pages.push(PageKind::Time(time_label.clone()));
+    }
+
+    info!("Built {} pages from {} sensor keys", pages.len(), sensor_keys.len());
+    pages
+}
+
+/// Expand the template display name using regex capture groups.
+/// `{1}`, `{2}`, etc. in the sensor `name` are replaced with capture group values.
+fn expand_template_name(sensor: &Sensor, caps: &regex::Captures) -> String {
+    let base_name = sensor
+        .name
+        .as_deref()
+        .or(sensor.item_name.as_deref())
+        .unwrap_or("Sensor");
+
+    let mut result = base_name.to_string();
+    for i in 1..=9 {
+        let placeholder = format!("{{{i}}}");
+        if let Some(m) = caps.get(i) {
+            result = result.replace(&placeholder, m.as_str());
+        }
+    }
+    result
 }
 
 /// Check if the display should be active based on the configured hour range.
