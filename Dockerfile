@@ -23,7 +23,6 @@ RUN cargo build --release
 FROM gcr.io/distroless/cc-debian12
 COPY /cfg /cfg
 COPY /fonts /fonts
-COPY /linux/scripts/cpu_usage.sh /linux/scripts/mem_usage.sh /
 COPY --from=build-env /dpkg/ /
 COPY --from=build-env /app/target/release/asterctl /
 COPY --from=build-env /app/target/release/aster-sysinfo /
