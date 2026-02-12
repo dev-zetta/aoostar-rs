@@ -6,10 +6,11 @@
     "timePage": "DATE_h_m_s_1",
     "sensorPageLabel": {
       "fontFamily": "HarmonyOS_Sans_SC_Bold",
-      "fontSize": 36,
+      "fontSize": 52,
       "fontColor": "#b4b4b4",
-      "y": 40
-    }
+      "y": 30
+    },
+    "timePageFontSize": 96
   },
   "sensorMapping": {
     "cpu_percent": "cpu_usage_percent",

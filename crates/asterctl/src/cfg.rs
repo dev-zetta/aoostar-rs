@@ -251,6 +251,8 @@ pub struct Setup {
     /// If not set, no time page is shown.
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub time_page: Option<String>,
+    /// Font size for the time page. Default: 64
+    pub time_page_font_size: Option<f32>,
     /// Configuration for the sensor name label shown on each sensor page.
     /// If not set, defaults are used.
     pub sensor_page_label: Option<SensorPageLabel>,

@@ -5,7 +5,7 @@
 #![deny(unsafe_code)]
 
 use asterctl::cfg::{MonitorConfig, load_custom_panel};
-use asterctl::render::PanelRenderer;
+use asterctl::render::{PanelRenderer, slide_transition};
 use asterctl::sensors::start_sensor_poller;
 use asterctl::{cfg, img};
 use asterctl_lcd::{AooScreen, AooScreenBuilder, DISPLAY_SIZE};
@@ -13,6 +13,7 @@ use asterctl_lcd::{AooScreen, AooScreenBuilder, DISPLAY_SIZE};
 use anyhow::anyhow;
 use clap::Parser;
 use env_logger::Env;
+use image::RgbaImage;
 use log::{debug, error, info};
 use std::collections::HashMap;
 use std::fs;
@@ -252,8 +253,14 @@ fn run_sensor_panel<B: Into<PathBuf>>(
         sensor_page_time.as_secs_f32()
     );
 
+    let time_font_size = cfg.setup.time_page_font_size;
+    let transition_steps = 10u32;
+    let transition_duration = Duration::from_millis(400);
+    let transition_frame_delay = transition_duration / transition_steps;
+
     // page cycling loop
     let mut page_idx = 0;
+    let mut last_image: Option<RgbaImage> = None;
     loop {
         let page = &pages[page_idx];
 
@@ -275,6 +282,7 @@ fn run_sensor_panel<B: Into<PathBuf>>(
 
         let page_start = Instant::now();
         let mut refresh_count = 1;
+        let mut current_image: Option<RgbaImage> = None;
 
         // refresh loop for current page
         loop {
@@ -284,25 +292,35 @@ fn run_sensor_panel<B: Into<PathBuf>>(
                 renderer.set_img_suffix(format!("-{refresh_count:02}"));
             }
 
-            match page {
+            let rendered = match page {
                 PageKind::Sensor(panel_idx, sensor_idx) => {
                     let panel = &cfg.panels[*panel_idx];
                     let values = sensor_values.read().expect("RwLock is poisoned");
-                    match renderer.render_sensor_page(panel, *sensor_idx, &values, cfg.setup.sensor_page_label.as_ref()) {
-                        Ok(image) => screen.send_image(&image)?,
-                        Err(e) => error!(
-                            "Error rendering sensor page '{}'/[{}]: {e:?}",
-                            panel.friendly_name(),
-                            sensor_idx
-                        ),
-                    }
+                    renderer.render_sensor_page(panel, *sensor_idx, &values, cfg.setup.sensor_page_label.as_ref())
                 }
                 PageKind::Time(label) => {
-                    match renderer.render_time_page(label) {
-                        Ok(image) => screen.send_image(&image)?,
-                        Err(e) => error!("Error rendering time page: {e:?}"),
-                    }
+                    renderer.render_time_page(label, time_font_size)
                 }
+            };
+
+            match rendered {
+                Ok(image) => {
+                    // Slide transition on first frame of a new page
+                    if refresh_count == 1 {
+                        if let Some(old_image) = &last_image {
+                            debug!("Slide transition: {transition_steps} frames over {}ms", transition_duration.as_millis());
+                            for step in 1..transition_steps {
+                                let progress = step as f32 / transition_steps as f32;
+                                let frame = slide_transition(old_image, &image, progress);
+                                screen.send_image(&frame)?;
+                                sleep(transition_frame_delay);
+                            }
+                        }
+                    }
+                    screen.send_image(&image)?;
+                    current_image = Some(image);
+                }
+                Err(e) => error!("Error rendering page: {e:?}"),
             }
 
             let elapsed = upd_start_time.elapsed();
@@ -317,6 +335,7 @@ fn run_sensor_panel<B: Into<PathBuf>>(
             refresh_count += 1;
         }
 
+        last_image = current_image;
         page_idx = (page_idx + 1) % pages.len();
     }
 }

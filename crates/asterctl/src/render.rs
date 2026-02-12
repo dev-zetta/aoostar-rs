@@ -162,7 +162,11 @@ impl PanelRenderer {
     /// * `label`: a date/time label recognized by [get_date_time_value], e.g. "DATE_h_m_s_1".
     ///
     /// returns: a rendered time page image in [RgbaImage] format, or an [ImageProcessingError] in case of an error.
-    pub fn render_time_page(&mut self, label: &str) -> Result<RgbaImage, ImageProcessingError> {
+    pub fn render_time_page(
+        &mut self,
+        label: &str,
+        time_font_size: Option<f32>,
+    ) -> Result<RgbaImage, ImageProcessingError> {
         let now_dt: DateTime<Local> = Local::now();
         let value = get_date_time_value(label, &now_dt)
             .unwrap_or_else(|| "??:??".to_string());
@@ -172,7 +176,7 @@ impl PanelRenderer {
         let mut image = RgbaImage::new(self.size.0, self.size.1);
 
         let font = FontHandler::default_font();
-        let font_size = 64.0_f32;
+        let font_size = time_font_size.unwrap_or(64.0);
         let adjustment_hack = 0.75;
         let scale = font.pt_to_px_scale(font_size * adjustment_hack).unwrap();
         let color = Rgba([255, 255, 255, 255]);
@@ -891,4 +895,28 @@ impl PanelRenderer {
             None
         }
     }
+}
+
+/// Generate a single slide-left transition frame between two images.
+///
+/// `progress` ranges from 0.0 (old page fully visible) to 1.0 (new page fully visible).
+/// The old page slides out to the left while the new page slides in from the right.
+pub fn slide_transition(old: &RgbaImage, new: &RgbaImage, progress: f32) -> RgbaImage {
+    let (w, h) = old.dimensions();
+    let offset = (progress * w as f32).round() as u32;
+    let mut frame = RgbaImage::new(w, h);
+
+    // Copy visible part of old image (shifted left)
+    if offset < w {
+        let old_visible = image::imageops::crop_imm(old, offset, 0, w - offset, h);
+        image::imageops::replace(&mut frame, &old_visible, 0, 0);
+    }
+
+    // Copy visible part of new image (entering from right)
+    if offset > 0 {
+        let new_visible = image::imageops::crop_imm(new, 0, 0, offset, h);
+        image::imageops::replace(&mut frame, &new_visible, (w - offset) as i64, 0);
+    }
+
+    frame
 }
