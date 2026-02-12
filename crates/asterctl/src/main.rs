@@ -5,15 +5,15 @@
 #![deny(unsafe_code)]
 
 use asterctl::cfg::{MonitorConfig, load_custom_panel};
-use asterctl::render::{PanelRenderer, slide_transition};
+use asterctl::render::PanelRenderer;
 use asterctl::sensors::start_sensor_poller;
 use asterctl::{cfg, img};
 use asterctl_lcd::{AooScreen, AooScreenBuilder, DISPLAY_SIZE};
 
 use anyhow::anyhow;
+use chrono::Timelike;
 use clap::Parser;
 use env_logger::Env;
-use image::RgbaImage;
 use log::{debug, error, info};
 use std::collections::HashMap;
 use std::fs;
@@ -254,13 +254,18 @@ fn run_sensor_panel<B: Into<PathBuf>>(
     );
 
     let time_font_size = cfg.setup.time_page_font_size;
-    let transition_steps = 10u32;
-    let transition_duration = Duration::from_millis(400);
-    let transition_frame_delay = transition_duration / transition_steps;
+    let mut display_off = false;
+
+    if cfg.setup.display_on_hour.is_some() || cfg.setup.display_off_hour.is_some() {
+        info!(
+            "Display schedule: on={}, off={}",
+            cfg.setup.display_on_hour.map_or("always".to_string(), |h| format!("{h}:00")),
+            cfg.setup.display_off_hour.map_or("never".to_string(), |h| format!("{h}:00")),
+        );
+    }
 
     // page cycling loop
     let mut page_idx = 0;
-    let mut last_image: Option<RgbaImage> = None;
     loop {
         let page = &pages[page_idx];
 
@@ -282,7 +287,6 @@ fn run_sensor_panel<B: Into<PathBuf>>(
 
         let page_start = Instant::now();
         let mut refresh_count = 1;
-        let mut current_image: Option<RgbaImage> = None;
 
         // refresh loop for current page
         loop {
@@ -290,6 +294,25 @@ fn run_sensor_panel<B: Into<PathBuf>>(
 
             if img_save_path.is_some() {
                 renderer.set_img_suffix(format!("-{refresh_count:02}"));
+            }
+
+            // Check display schedule: turn display on/off based on hour range
+            let display_on = is_display_active(&cfg);
+            if !display_on {
+                if !display_off {
+                    info!("Display schedule: turning off");
+                    screen.off()?;
+                    display_off = true;
+                }
+                sleep(Duration::from_secs(30));
+                if page_start.elapsed() >= sensor_page_time {
+                    break;
+                }
+                continue;
+            } else if display_off {
+                info!("Display schedule: turning on");
+                screen.on()?;
+                display_off = false;
             }
 
             let rendered = match page {
@@ -305,20 +328,7 @@ fn run_sensor_panel<B: Into<PathBuf>>(
 
             match rendered {
                 Ok(image) => {
-                    // Slide transition on first frame of a new page
-                    if refresh_count == 1 {
-                        if let Some(old_image) = &last_image {
-                            debug!("Slide transition: {transition_steps} frames over {}ms", transition_duration.as_millis());
-                            for step in 1..transition_steps {
-                                let progress = step as f32 / transition_steps as f32;
-                                let frame = slide_transition(old_image, &image, progress);
-                                screen.send_image(&frame)?;
-                                sleep(transition_frame_delay);
-                            }
-                        }
-                    }
                     screen.send_image(&image)?;
-                    current_image = Some(image);
                 }
                 Err(e) => error!("Error rendering page: {e:?}"),
             }
@@ -335,7 +345,6 @@ fn run_sensor_panel<B: Into<PathBuf>>(
             refresh_count += 1;
         }
 
-        last_image = current_image;
         page_idx = (page_idx + 1) % pages.len();
     }
 }
@@ -343,4 +352,30 @@ fn run_sensor_panel<B: Into<PathBuf>>(
 enum PageKind {
     Sensor(usize, usize),
     Time(String),
+}
+
+/// Check if the display should be active based on the configured hour range.
+///
+/// - If both `display_on_hour` and `display_off_hour` are set, the display is active
+///   when the current hour is within `[on_hour, off_hour)`.
+///   Supports wrap-around (e.g., on=22, off=6 means active from 22:00 to 05:59).
+/// - If only `display_on_hour` is set, the display is active from that hour onwards.
+/// - If only `display_off_hour` is set, the display is active until that hour.
+/// - If neither is set, the display is always active.
+fn is_display_active(cfg: &MonitorConfig) -> bool {
+    let (on_hour, off_hour) = match (cfg.setup.display_on_hour, cfg.setup.display_off_hour) {
+        (None, None) => return true,
+        (Some(on), None) => return chrono::Local::now().hour() >= on,
+        (None, Some(off)) => return chrono::Local::now().hour() < off,
+        (Some(on), Some(off)) => (on, off),
+    };
+
+    let hour = chrono::Local::now().hour();
+    if on_hour <= off_hour {
+        // e.g., on=8, off=22 → active during 08:00–21:59
+        hour >= on_hour && hour < off_hour
+    } else {
+        // e.g., on=22, off=6 → active during 22:00–05:59
+        hour >= on_hour || hour < off_hour
+    }
 }

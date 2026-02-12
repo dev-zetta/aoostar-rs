@@ -253,6 +253,10 @@ pub struct Setup {
     pub time_page: Option<String>,
     /// Font size for the time page. Default: 64
     pub time_page_font_size: Option<f32>,
+    /// Hour (0–23) when the display should turn on. Used with `display_off_hour` for scheduling.
+    pub display_on_hour: Option<u32>,
+    /// Hour (0–23) when the display should turn off. Used with `display_on_hour` for scheduling.
+    pub display_off_hour: Option<u32>,
     /// Configuration for the sensor name label shown on each sensor page.
     /// If not set, defaults are used.
     pub sensor_page_label: Option<SensorPageLabel>,

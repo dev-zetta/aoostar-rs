@@ -897,26 +897,3 @@ impl PanelRenderer {
     }
 }
 
-/// Generate a single slide-left transition frame between two images.
-///
-/// `progress` ranges from 0.0 (old page fully visible) to 1.0 (new page fully visible).
-/// The old page slides out to the left while the new page slides in from the right.
-pub fn slide_transition(old: &RgbaImage, new: &RgbaImage, progress: f32) -> RgbaImage {
-    let (w, h) = old.dimensions();
-    let offset = (progress * w as f32).round() as u32;
-    let mut frame = RgbaImage::new(w, h);
-
-    // Copy visible part of old image (shifted left)
-    if offset < w {
-        let old_visible = image::imageops::crop_imm(old, offset, 0, w - offset, h).to_image();
-        image::imageops::replace(&mut frame, &old_visible, 0, 0);
-    }
-
-    // Copy visible part of new image (entering from right)
-    if offset > 0 {
-        let new_visible = image::imageops::crop_imm(new, 0, 0, offset, h).to_image();
-        image::imageops::replace(&mut frame, &new_visible, (w - offset) as i64, 0);
-    }
-
-    frame
-}
