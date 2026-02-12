@@ -125,20 +125,3 @@ systemd-analyze security lcd-off.service
 ## asterctl Daemon
 
 _TODO_
-
-## aster-sysinfo Daemon
-
-‼️ Work in progress. This also requires the `asterctl` daemon running. 
-
-The systemd unit [aster-sysinfo.service](https://github.com/zehnm/aoostar-rs/blob/main/linux/aster-sysinfo.service)
-can be installed to automatically collect system sensor information for `asterctl`.
-
-### Install
-
-As root user, otherwise `sudo` is required:
-```shell
-cp aster-sysinfo /usr/local/bin/
-cp aster-sysinfo.service /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable aster-sysinfo
-```

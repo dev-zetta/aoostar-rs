@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Copyright (c) 2025 Markus Zehnder
+// SPDX-FileCopyrightText: Copyright (c) 2026 Gabriel Max
 
 //! AOOSTAR-X json configuration file format.
 //!

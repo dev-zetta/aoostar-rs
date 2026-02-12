@@ -41,6 +41,56 @@ With that out of the way, on to the fun stuff!
 - Browse the source code or read the [User Guide](https://zehnm.github.io/aoostar-rs)
 - See [releases](https://github.com/zehnm/aoostar-rs/releases) for binary Linux x64 releases. A Debian package for easy installation is planned for the future!
 
+## Running in a Proxmox LXC Container
+
+The AOOSTAR WTR MAX / GEM12+ PRO LCD can be controlled from inside an LXC container running on Proxmox VE.
+This requires passing through the USB serial device to the container.
+
+### 1. Identify the USB device on the Proxmox host
+
+```shell
+lsusb | grep 0416
+# Example output: Bus 001 Device 002: ID 0416:90a1
+ls -l /dev/ttyACM0
+# crw-rw---- 1 root dialout 166, 0 ...
+```
+
+### 2. Pass the device to the LXC container
+
+Add the following to the container configuration on the Proxmox host
+(`/etc/pve/lxc/<CTID>.conf`):
+
+```
+lxc.cgroup2.devices.allow: c 166:* rwm
+lxc.mount.entry: /dev/ttyACM0 dev/ttyACM0 none bind,optional,create=file
+```
+
+- `166` is the major device number for `/dev/ttyACM0` (USB ACM devices).
+- Use `ls -l /dev/ttyACM0` to verify the major number on your host.
+
+### 3. Set permissions inside the container
+
+After starting the container, ensure the device is accessible:
+
+```shell
+# Verify the device is visible
+ls -l /dev/ttyACM0
+
+# Add your user to the dialout group (if not running as root)
+usermod -aG dialout <username>
+```
+
+### 4. Install and run asterctl
+
+Copy or build the `asterctl` binary inside the container, then run it normally:
+
+```shell
+asterctl --config monitor.json
+```
+
+> **Note**: If the USB device is not present at container start (e.g., after a host reboot where the
+> device enumerates late), you may need to restart the container or re-bind the device.
+
 ## Contributing
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
