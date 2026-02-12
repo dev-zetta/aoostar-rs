@@ -202,6 +202,8 @@ pub struct Setup {
     pub switch_time: Option<String>, // existed as "30" string
     /// Panel redraw interval in seconds. Default: 1
     pub refresh: f32,
+    /// Time in seconds to display each sensor page before cycling to the next. Default: 10
+    pub sensor_page_time: Option<f32>,
     /*
     // The following fields of the AOOSTAR-X json configuration file are NOT used in `asterctl`
     /// Default: true

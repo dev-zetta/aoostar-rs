@@ -4,7 +4,7 @@
 #![forbid(non_ascii_idents)]
 #![deny(unsafe_code)]
 
-use asterctl::cfg::{MonitorConfig, Panel, load_custom_panel};
+use asterctl::cfg::{MonitorConfig, load_custom_panel};
 use asterctl::render::PanelRenderer;
 use asterctl::sensors::{read_filter_file, read_key_value_file, start_file_slurper};
 use asterctl::{cfg, img};
@@ -18,7 +18,6 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
@@ -234,7 +233,7 @@ fn load_sensor_filter(mapping_cfg: &Path) -> anyhow::Result<Option<Vec<Regex>>> 
 
 fn run_sensor_panel<B: Into<PathBuf>>(
     screen: &mut AooScreen,
-    mut cfg: MonitorConfig,
+    cfg: MonitorConfig,
     config_dir: B,
     font_dir: B,
     sensor_path: B,
@@ -261,26 +260,50 @@ fn run_sensor_panel<B: Into<PathBuf>>(
     )?;
 
     let refresh = Duration::from_millis((cfg.setup.refresh * 1000f32) as u64);
+    let sensor_page_time =
+        Duration::from_secs_f32(cfg.setup.sensor_page_time.unwrap_or(10.0));
 
-    let switch_time = cfg
-        .setup
-        .switch_time
-        .as_deref()
-        .and_then(|v| f32::from_str(v).ok())
-        .map(|v| Duration::from_millis((v * 1000.0) as u64))
-        .unwrap_or(Duration::from_secs(5));
+    // Collect all (panel_index, sensor_index) pairs from active panels
+    let mut sensor_pages: Vec<(usize, usize)> = Vec::new();
+    for &active in &cfg.active_panels {
+        if active == 0 || active > cfg.panels.len() as u32 {
+            continue;
+        }
+        let panel_idx = active as usize - 1;
+        let panel = &cfg.panels[panel_idx];
+        for sensor_idx in 0..panel.sensor.len() {
+            sensor_pages.push((panel_idx, sensor_idx));
+        }
+    }
 
-    // panel switching loop
+    if sensor_pages.is_empty() {
+        return Err(anyhow!("No sensor pages to display"));
+    }
+
+    info!(
+        "Sensor page mode: {} sensor pages, cycling every {:.1}s",
+        sensor_pages.len(),
+        sensor_page_time.as_secs_f32()
+    );
+
+    // sensor page cycling loop
+    let mut page_idx = 0;
     loop {
-        let panel = cfg
-            .get_next_active_panel()
-            .ok_or(anyhow!("No active panel"))?;
+        let (panel_idx, sensor_idx) = sensor_pages[page_idx];
+        let panel = &cfg.panels[panel_idx];
 
-        info!("Switching panel: {}", panel.friendly_name());
-        let panel_switch_time = Instant::now();
+        info!(
+            "Sensor page {}/{}: panel '{}', sensor '{}'",
+            page_idx + 1,
+            sensor_pages.len(),
+            panel.friendly_name(),
+            panel.sensor[sensor_idx].label
+        );
 
-        // active panel refresh loop
+        let page_start = Instant::now();
         let mut refresh_count = 1;
+
+        // refresh loop for current sensor page
         loop {
             let upd_start_time = Instant::now();
 
@@ -288,9 +311,15 @@ fn run_sensor_panel<B: Into<PathBuf>>(
                 renderer.set_img_suffix(format!("-{refresh_count:02}"));
             }
 
-            // Keeping the read lock during panel rendering should be ok, otherwise we could always clone the HashMap
             let values = sensor_values.read().expect("RwLock is poisoned");
-            update_panel(screen, &mut renderer, panel, &values)?;
+            match renderer.render_sensor_page(panel, sensor_idx, &values) {
+                Ok(image) => screen.send_image(&image)?,
+                Err(e) => error!(
+                    "Error rendering sensor page '{}'/[{}]: {e:?}",
+                    panel.friendly_name(),
+                    sensor_idx
+                ),
+            }
             drop(values);
 
             let elapsed = upd_start_time.elapsed();
@@ -298,27 +327,13 @@ fn run_sensor_panel<B: Into<PathBuf>>(
                 sleep(refresh - elapsed);
             }
 
-            if panel_switch_time.elapsed() >= switch_time {
+            if page_start.elapsed() >= sensor_page_time {
                 break;
             }
 
             refresh_count += 1;
         }
+
+        page_idx = (page_idx + 1) % sensor_pages.len();
     }
-}
-
-fn update_panel(
-    screen: &mut AooScreen,
-    renderer: &mut PanelRenderer,
-    panel: &Panel,
-    values: &HashMap<String, String>,
-) -> anyhow::Result<()> {
-    debug!("Displaying panel '{}'...", panel.friendly_name());
-
-    match renderer.render(panel, values) {
-        Ok(image) => screen.send_image(&image)?,
-        Err(e) => error!("Error rendering panel '{}': {e:?}", panel.friendly_name()),
-    }
-
-    Ok(())
 }

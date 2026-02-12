@@ -155,6 +155,74 @@ impl PanelRenderer {
         Ok(final_image)
     }
 
+    /// Render a single sensor page: one sensor on the panel background.
+    ///
+    /// # Arguments
+    ///
+    /// * `panel`: the panel configuration (used for background image)
+    /// * `sensor_index`: index of the sensor to render
+    /// * `values`: current values for the defined panel sensors in a shared HashMap
+    ///
+    /// returns: a rendered sensor page image in [RgbaImage] format, or an [ImageProcessingError] in case of an error.
+    pub fn render_sensor_page(
+        &mut self,
+        panel: &Panel,
+        sensor_index: usize,
+        values: &HashMap<String, String>,
+    ) -> Result<RgbaImage, ImageProcessingError> {
+        let sensor = &panel.sensor[sensor_index];
+        debug!(
+            "Rendering sensor page {}/{} of panel '{}': {}",
+            sensor_index + 1,
+            panel.sensor.len(),
+            panel.friendly_name(),
+            sensor.label
+        );
+
+        let now = Instant::now();
+        let background = if let Some(img) = &panel.img
+            && let Some(background) = self.image_cache.get(img, Some(self.size))
+        {
+            background.clone()
+        } else {
+            RgbaImage::new(self.size.0, self.size.1)
+        };
+        self.composite_layer_map.clear();
+
+        let now_dt: DateTime<Local> = Local::now();
+        let value = values.get(&sensor.label).cloned();
+        let unit = values
+            .get(&format!("{}#unit", sensor.label))
+            .cloned()
+            .or_else(|| sensor.unit.clone())
+            .unwrap_or_default();
+
+        let mut final_image = background;
+        if let Some(value) = value {
+            self.render_sensor(&mut final_image, sensor, &value, &unit)?;
+        } else if let Some(value) = get_date_time_value(&sensor.label, &now_dt) {
+            self.render_sensor(&mut final_image, sensor, &value, &unit)?;
+        }
+
+        self.composite_layers(&mut final_image);
+
+        debug!("Rendered sensor page in {}ms", now.elapsed().as_millis());
+
+        if self.save_render_img {
+            let name = format!(
+                "render_{}_s{}{}.png",
+                panel.friendly_name(),
+                sensor_index,
+                self.img_suffix.as_deref().unwrap_or_default()
+            );
+            if let Err(e) = final_image.save(self.img_save_path.join(name)) {
+                error!("Error saving rendered sensor page image: {e}");
+            }
+        }
+
+        Ok(final_image)
+    }
+
     /// Render all panel sensors with the given values on a background image
     pub fn render_all_sensors(
         &mut self,
